@@ -6,7 +6,7 @@ A fun and interactive game to help you practice your MIDI keyboard timing and ac
 
 *   **MIDI Device Integration:** Connect your MIDI keyboard (optimized for C3-C5 range, e.g., Arturia MiniLab 3).
 *   **Computer Keyboard Fallback:** Play using your computer keyboard (A, S, D, F, G, H, J for white keys C4-B4; W, E, T, Y, U for black keys C#4-A#4).
-*   **Falling Notes Gameplay:** Classic rhythm game style.
+*   **Falling Bars Gameplay:** Notes appear as falling bars, aligning with virtual keyboard keys.
 *   **Scoring System:** Points awarded based on timing accuracy.
 *   **Combo Multiplier:** String together successful hits for a higher score.
 *   **Lives System:** Start with 3 lives; lose a life for missed notes.
@@ -32,10 +32,10 @@ A fun and interactive game to help you practice your MIDI keyboard timing and ac
 
 2.  **Gameplay:**
     *   Click "Start Game".
-    *   Notes will begin to fall from the top of the screen.
-    *   When a note enters the green "HIT ZONE" at the bottom, press the corresponding key on your MIDI keyboard or computer keyboard.
+    *   Bars representing notes will begin to fall from the top of the screen, corresponding to different keys on the virtual keyboard.
+    *   When the bottom edge of a falling bar aligns with the top edge of its corresponding key on the virtual keyboard, press the correct key on your MIDI or computer keyboard.
     *   Your score and combo will increase with accurate hits.
-    *   If you miss a note (it falls below the hit zone), you lose a life.
+    *   If a bar passes the alignment point for its key without being hit correctly, you lose a life.
     *   The game ends when you run out of lives.
 
 3.  **Controls:**
