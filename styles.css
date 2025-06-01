@@ -298,16 +298,16 @@ body::before {
 }
 
 /* Black key positioning relative to the start of the white keys container */
-.black-key[data-position="0"]  { left: calc(var(--key-width-desktop) * 1 - var(--black-key-width-desktop) / 2 - 1px); } /* C#3 (between C3-D3) */
-.black-key[data-position="1"]  { left: calc(var(--key-width-desktop) * 2 - var(--black-key-width-desktop) / 2 - 1px); } /* D#3 */
-.black-key[data-position="3"]  { left: calc(var(--key-width-desktop) * 4 - var(--black-key-width-desktop) / 2 - 1px); } /* F#3 */
-.black-key[data-position="4"]  { left: calc(var(--key-width-desktop) * 5 - var(--black-key-width-desktop) / 2 - 1px); } /* G#3 */
-.black-key[data-position="5"]  { left: calc(var(--key-width-desktop) * 6 - var(--black-key-width-desktop) / 2 - 1px); } /* A#3 */
-.black-key[data-position="7"]  { left: calc(var(--key-width-desktop) * 8 - var(--black-key-width-desktop) / 2 - 1px); } /* C#4 */
-.black-key[data-position="8"]  { left: calc(var(--key-width-desktop) * 9 - var(--black-key-width-desktop) / 2 - 1px); } /* D#4 */
-.black-key[data-position="10"] { left: calc(var(--key-width-desktop) * 11 - var(--black-key-width-desktop) / 2 - 1px); } /* F#4 */
-.black-key[data-position="11"] { left: calc(var(--key-width-desktop) * 12 - var(--black-key-width-desktop) / 2 - 1px); } /* G#4 */
-.black-key[data-position="12"] { left: calc(var(--key-width-desktop) * 13 - var(--black-key-width-desktop) / 2 - 1px); } /* A#4 */
+.black-key[data-position="0"]  { left: calc(var(--key-width-desktop) * 1 - var(--black-key-width-desktop) * 0.75 - 1px); } /* C#3 (between C3-D3) */
+.black-key[data-position="1"]  { left: calc(var(--key-width-desktop) * 2 - var(--black-key-width-desktop) * 0.75 - 1px); } /* D#3 */
+.black-key[data-position="3"]  { left: calc(var(--key-width-desktop) * 4 - var(--black-key-width-desktop) * 0.75 - 1px); } /* F#3 */
+.black-key[data-position="4"]  { left: calc(var(--key-width-desktop) * 5 - var(--black-key-width-desktop) * 0.75 - 1px); } /* G#3 */
+.black-key[data-position="5"]  { left: calc(var(--key-width-desktop) * 6 - var(--black-key-width-desktop) * 0.75 - 1px); } /* A#3 */
+.black-key[data-position="7"]  { left: calc(var(--key-width-desktop) * 8 - var(--black-key-width-desktop) * 0.75 - 1px); } /* C#4 */
+.black-key[data-position="8"]  { left: calc(var(--key-width-desktop) * 9 - var(--black-key-width-desktop) * 0.75 - 1px); } /* D#4 */
+.black-key[data-position="10"] { left: calc(var(--key-width-desktop) * 11 - var(--black-key-width-desktop) * 0.75 - 1px); } /* F#4 */
+.black-key[data-position="11"] { left: calc(var(--key-width-desktop) * 12 - var(--black-key-width-desktop) * 0.75 - 1px); } /* G#4 */
+.black-key[data-position="12"] { left: calc(var(--key-width-desktop) * 13 - var(--black-key-width-desktop) * 0.75 - 1px); } /* A#4 */
 
 
 .key-label {
@@ -528,16 +528,16 @@ body::before {
     .computer-key-hint { font-size: 0.6em; top: 3px; }
 
     /* Recalculate black key positions for mobile key widths */
-    .black-key[data-position="0"]  { left: calc(var(--key-width-mobile) * 1 - var(--black-key-width-mobile) / 2 - 0.5px); }
-    .black-key[data-position="1"]  { left: calc(var(--key-width-mobile) * 2 - var(--black-key-width-mobile) / 2 - 0.5px); }
-    .black-key[data-position="3"]  { left: calc(var(--key-width-mobile) * 4 - var(--black-key-width-mobile) / 2 - 0.5px); }
-    .black-key[data-position="4"]  { left: calc(var(--key-width-mobile) * 5 - var(--black-key-width-mobile) / 2 - 0.5px); }
-    .black-key[data-position="5"]  { left: calc(var(--key-width-mobile) * 6 - var(--black-key-width-mobile) / 2 - 0.5px); }
-    .black-key[data-position="7"]  { left: calc(var(--key-width-mobile) * 8 - var(--black-key-width-mobile) / 2 - 0.5px); }
-    .black-key[data-position="8"]  { left: calc(var(--key-width-mobile) * 9 - var(--black-key-width-mobile) / 2 - 0.5px); }
-    .black-key[data-position="10"] { left: calc(var(--key-width-mobile) * 11 - var(--black-key-width-mobile) / 2 - 0.5px); }
-    .black-key[data-position="11"] { left: calc(var(--key-width-mobile) * 12 - var(--black-key-width-mobile) / 2 - 0.5px); }
-    .black-key[data-position="12"] { left: calc(var(--key-width-mobile) * 13 - var(--black-key-width-mobile) / 2 - 0.5px); }
+    .black-key[data-position="0"]  { left: calc(var(--key-width-mobile) * 1 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
+    .black-key[data-position="1"]  { left: calc(var(--key-width-mobile) * 2 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
+    .black-key[data-position="3"]  { left: calc(var(--key-width-mobile) * 4 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
+    .black-key[data-position="4"]  { left: calc(var(--key-width-mobile) * 5 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
+    .black-key[data-position="5"]  { left: calc(var(--key-width-mobile) * 6 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
+    .black-key[data-position="7"]  { left: calc(var(--key-width-mobile) * 8 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
+    .black-key[data-position="8"]  { left: calc(var(--key-width-mobile) * 9 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
+    .black-key[data-position="10"] { left: calc(var(--key-width-mobile) * 11 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
+    .black-key[data-position="11"] { left: calc(var(--key-width-mobile) * 12 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
+    .black-key[data-position="12"] { left: calc(var(--key-width-mobile) * 13 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
 
     .btn { padding: 10px 18px; font-size: 0.8em; }
     .instruction-group h3 { font-size: 0.9em; }
