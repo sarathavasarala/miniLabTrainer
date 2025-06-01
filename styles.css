@@ -220,21 +220,29 @@ body::before {
     border: 1px solid #2980b9;
     /* width and height will be set by JavaScript */
     box-sizing: border-box; /* Include border in width/height */
+    display: flex; /* For centering text content */
+    align-items: center; /* For centering text content */
+    justify-content: center; /* For centering text content */
+    font-size: 16px; /* Adjusted for note names */
+    /* font-weight: bold; Removed for clearer note names */
+    color: white; /* Default text color */
 }
 
 .falling-bar.hit {
     background-color: #f1c40f; /* Yellow for hit */
-    border-color: #f39c12;
+    border: 3px solid #fff; /* Prominent white border for hit */
+    color: #2c3e50; /* Darker text for contrast on yellow */
     /* Add any transition or subtle animation if desired */
-    transition: background-color 0.1s ease;
+    transition: background-color 0.1s ease, border 0.1s ease;
 }
 
 .falling-bar.miss {
     background-color: #e74c3c; /* Red for miss */
-    border-color: #c0392b;
+    border: 3px solid #7f8c8d; /* Darker border for miss */
+    color: white; /* White text for contrast on red */
     opacity: 0.7;
     /* Add any transition or subtle animation if desired */
-    transition: background-color 0.1s ease, opacity 0.3s ease;
+    transition: background-color 0.1s ease, opacity 0.3s ease, border 0.1s ease;
 }
 
 /* Keyboard styles */
@@ -449,6 +457,61 @@ body::before {
     letter-spacing: 0.5px;
     text-transform: uppercase;
     font-size: 0.9em;
+}
+
+.game-modes {
+    display: flex;
+    gap: 10px; /* Spacing between mode buttons */
+    margin: 0 10px; /* Spacing around the mode buttons group */
+}
+
+.mode-btn {
+    /*padding: 10px 20px; /* Slightly smaller padding if needed, or use global .btn padding */
+    background: linear-gradient(135deg, #5a68a5 0%, #6a5f90 100%); /* Different base color */
+}
+
+.mode-btn.active-mode {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Active color like other buttons */
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.scale-selection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 10px; /* Spacing around the scale selector group */
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.scale-selection label {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.control-select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    color: var(--text-primary);
+    font-size: 0.9em;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.control-select:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+}
+
+.control-select option {
+    background: #333; /* Darker background for options for better readability */
+    color: white;
 }
 
 .btn:hover:not(:disabled) {
