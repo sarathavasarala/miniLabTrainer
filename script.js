@@ -8,9 +8,12 @@ class MidiKeyboardGame {
         this.midiAccess = null;
         this.midiInput = null;
         this.fallingNotes = [];
-        this.gameSpeed = 1.5; // pixels per frame
+        this.gameSpeed = 1; // pixels per frame
         this.noteSpawnRate = 120; // frames between notes (2 seconds at 60fps)
         this.framesSinceLastNote = 0;
+        this.barHeight = 60;
+        this.hitTolerance = 5; // Pixels for hit accuracy
+        this.barWidth = 50; // Width of the falling bars
         this.gameLoop = null;
         
         // Audio setup
@@ -345,7 +348,7 @@ class MidiKeyboardGame {
         
         const keyRect = keyElement.getBoundingClientRect();
         const gameAreaRect = this.gameArea.getBoundingClientRect();
-        const noteX = keyRect.left - gameAreaRect.left + (keyRect.width / 2) - 30; // Center on key
+        const noteX = keyRect.left - gameAreaRect.left + (keyRect.width / 2) - (this.barWidth / 2); // Center the bar
         
         const note = {
             id: Date.now() + Math.random(),
@@ -362,11 +365,13 @@ class MidiKeyboardGame {
     
     createNoteElement(note) {
         const noteElement = document.createElement('div');
-        noteElement.className = 'falling-note';
+        noteElement.className = 'falling-bar'; // Changed class name
         noteElement.id = `note-${note.id}`;
-        noteElement.textContent = note.note;
+        // noteElement.textContent = note.note; // Removed text content
         noteElement.style.left = `${note.x}px`;
         noteElement.style.top = `${note.y}px`;
+        noteElement.style.width = `${this.barWidth}px`; // New: using this.barWidth
+        noteElement.style.height = `${this.barHeight}px`; // New: using this.barHeight
         
         this.fallingNotesContainer.appendChild(noteElement);
     }
@@ -384,81 +389,91 @@ class MidiKeyboardGame {
     }
     
     checkNoteHit(pressedNote) {
-        const hitZoneElement = this.gameArea.querySelector('.hit-zone');
-        if (!hitZoneElement) {
-            console.error("Hit zone element not found!");
-            return; // Or handle error appropriately
-        }
-        const hitZoneTop = hitZoneElement.offsetTop;
-        const hitZoneBottom = hitZoneElement.offsetTop + hitZoneElement.offsetHeight;
-        
-        for (let note of this.fallingNotes) {
-            if (note.hit || note.missed) continue;
-            
-            if (note.note === pressedNote && 
-                note.y >= hitZoneTop && 
-                note.y <= hitZoneBottom) {
-                
-                // Calculate timing accuracy
-                const hitZoneCenter = (hitZoneTop + hitZoneBottom) / 2;
-                const distance = Math.abs(note.y - hitZoneCenter);
-                const maxDistance = (hitZoneBottom - hitZoneTop) / 2;
-                const accuracy = 1 - (distance / maxDistance);
-                
-                // Score based on accuracy
-                let points = Math.floor(100 * accuracy);
-                if (accuracy > 0.8) points = 100; // Perfect
-                else if (accuracy > 0.6) points = 75; // Good
-                else points = 50; // OK
-                
-                this.score += points * this.combo;
-                this.combo = Math.min(this.combo + 1, 10); // Max combo of 10
-                
-                // Visual feedback
-                note.hit = true;
-                const noteElement = document.getElementById(`note-${note.id}`);
-                if (noteElement) {
-                    noteElement.classList.add('hit');
-                    this.createParticleEffect(note.x + 30, note.y + 30);
-                }
-                
-                // Highlight the correct key
-                const keyElement = document.querySelector(`[data-note="${pressedNote}"]`);
-                if (keyElement) {
+        const keyElement = document.querySelector(`[data-note="${pressedNote}"]`);
+        if (!keyElement) return;
+
+        const gameAreaRect = this.gameArea.getBoundingClientRect();
+        const keyRect = keyElement.getBoundingClientRect();
+        // Calculate keyTopY relative to the fallingNotesContainer's coordinate system
+        // Assuming fallingNotesContainer is the direct offsetParent for positioning calculations,
+        // or that its top aligns with gameArea.top for this calculation to be simple.
+        // If fallingNotesContainer has its own offset, this might need adjustment.
+        // For now, assume keyTopY relative to gameArea is sufficient if bars are positioned relative to gameArea.
+        const keyTopY = keyRect.top - gameAreaRect.top;
+
+        for (let bar of this.fallingNotes) {
+            if (bar.hit || bar.missed) continue;
+
+            if (bar.note === pressedNote) {
+                const barBottomY = bar.y + this.barHeight;
+
+                if (Math.abs(barBottomY - keyTopY) <= this.hitTolerance) {
+                    bar.hit = true;
+                    this.score += 100; // Basic score
+                    this.combo = Math.min(this.combo + 1, 10);
+
+                    const barElement = document.getElementById(`note-${bar.id}`);
+                    if (barElement) {
+                        barElement.classList.add('hit');
+                        // Position particles at the bottom-center of the bar where it hits the key line
+                        this.createParticleEffect(bar.x + (this.barWidth / 2), barBottomY);
+                        setTimeout(() => this.removeNote(bar.id), 300);
+                    }
+
                     keyElement.classList.add('correct');
                     setTimeout(() => keyElement.classList.remove('correct'), 500);
+
+                    this.updateUI(); // Update score and combo display
+                    return; // One press hits one bar
                 }
-                
-                // Remove note after animation
-                setTimeout(() => this.removeNote(note.id), 300);
-                return;
             }
         }
-        
-        // If we get here, it was a wrong key press
+
+        // If loop completes, no bar was hit for this key press at the right time
         this.combo = 1;
-        const keyElement = document.querySelector(`[data-note="${pressedNote}"]`);
-        if (keyElement) {
-            keyElement.classList.add('wrong');
-            setTimeout(() => keyElement.classList.remove('wrong'), 500);
-        }
+        keyElement.classList.add('wrong');
+        setTimeout(() => keyElement.classList.remove('wrong'), 500);
+        this.updateUI(); // Update combo display
     }
     
     checkMissedNotes() {
-        const missThreshold = this.gameArea.offsetHeight;
-        
-        this.fallingNotes.forEach(note => {
-            if (!note.hit && !note.missed && note.y > missThreshold) {
-                note.missed = true;
+        const gameAreaRect = this.gameArea.getBoundingClientRect();
+
+        this.fallingNotes.forEach(bar => {
+            if (bar.hit || bar.missed) return; // Use 'return' to skip to next iteration in forEach
+
+            const keyElement = document.querySelector(`[data-note="${bar.note}"]`);
+            if (!keyElement) {
+                console.warn(`Missed check: No key element found for note ${bar.note}`);
+                return;
+            }
+
+            const keyRect = keyElement.getBoundingClientRect();
+            const keyTopY = keyRect.top - gameAreaRect.top;
+
+            // A bar is missed if its top (bar.y) has passed the key's top alignment point (keyTopY)
+            // by more than the hitTolerance. This means the opportunity to align
+            // bar.y + this.barHeight with keyTopY is gone.
+            if (bar.y > keyTopY + this.hitTolerance) {
+                bar.missed = true;
                 this.lives--;
                 this.combo = 1;
-                
-                const noteElement = document.getElementById(`note-${note.id}`);
-                if (noteElement) {
-                    noteElement.classList.add('miss');
-                    setTimeout(() => this.removeNote(note.id), 500);
+
+                const barElement = document.getElementById(`note-${bar.id}`);
+                if (barElement) {
+                    barElement.classList.add('miss');
+                    // Add a small visual effect like a shake or fade out for missed notes
+                    setTimeout(() => {
+                        if (barElement.parentNode) { // Check if still in DOM
+                            // Optional: Add a more distinct miss animation if desired
+                            // For now, just remove it
+                            this.removeNote(bar.id);
+                        }
+                    }, 500);
                 }
                 
+                this.updateUI();
+
                 if (this.lives <= 0) {
                     this.gameOver();
                 }
