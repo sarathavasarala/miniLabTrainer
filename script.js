@@ -19,21 +19,21 @@ class MidiKeyboardGame {
 
         // Game Mechanics
         this.fallingNotes = [];
-        this.baseGameSpeed = 1.0; // Base speed factor; level speed is derived from this
-        this.noteSpawnRate = 120; // Base rate, modified by level in free play
+        this.baseGameSpeed = 1.0; 
+        this.noteSpawnRate = 120; 
         this.framesSinceLastNote = 0;
         this.barHeight = 50;
-        this.barWidth = 45; // Default width of falling bars
+        this.barWidth = 45; 
 
         // Dynamic Speed Properties
-        this.dynamicSpeedFactor = 1.0; // Multiplies level's base speed
-        this.maxDynamicSpeedFactor = 1.8; // Max speed increase from dynamic factor
-        this.minDynamicSpeedFactor = 0.8; // Min speed factor (e.g., after mistakes)
+        this.dynamicSpeedFactor = 1.0; 
+        this.maxDynamicSpeedFactor = 1.8; 
+        this.minDynamicSpeedFactor = 0.8; 
         this.consecutivePerfectGreatHits = 0;
-        this.hitsForSpeedBoost = 4; // Number of consecutive Perfect/Great hits for a speed boost
-        this.comboMilestoneForSpeedBoost = 5; // Speed boost every X combo points
+        this.hitsForSpeedBoost = 4; 
+        this.comboMilestoneForSpeedBoost = 5; 
 
-        // Hit Timing (pixels from hitLineY for bottom of the bar)
+        // Hit Timing
         this.hitTolerances = {
             perfect: 8,
             great: 16,
@@ -50,7 +50,7 @@ class MidiKeyboardGame {
         this.lastFrameTime = 0;
 
         // Note & Scale Configuration
-        this.practiceNotes = [ // C3 to C5 range
+        this.practiceNotes = [ 
             'C3', 'C#3', 'D3', 'D#3', 'E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3',
             'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4', 'A#4', 'B4',
             'C5'
@@ -62,10 +62,7 @@ class MidiKeyboardGame {
             'G4': 67, 'G#4': 68, 'A4': 69, 'A#4': 70, 'B4': 71,
             'C5': 72
         };
-        this.computerKeyToMidi = { // C4 Octave + C5
-            'A': 60, 'W': 61, 'S': 62, 'E': 63, 'D': 64, 'F': 65, 'T': 66, 
-            'G': 67, 'Y': 68, 'H': 69, 'U': 70, 'J': 71, 'K': 72 
-        };
+        // Removed this.computerKeyToMidi
 
         this.availableScales = {
             'all_notes': this.practiceNotes,
@@ -74,7 +71,7 @@ class MidiKeyboardGame {
             'c_major_scale_c4_c5': ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'],
             'chromatic_c4_c5': this.practiceNotes.slice(this.practiceNotes.indexOf('C4'))
         };
-        this.currentScaleKey = 'all_notes'; // Default scale
+        this.currentScaleKey = 'all_notes'; 
 
         // Level Configuration
         this.levels = {
@@ -82,14 +79,14 @@ class MidiKeyboardGame {
             2: { speedMultiplier: 0.9, spawnRate: 130, notes: this.availableScales.c_major_pentascale, scoreToAdvance: 2000 },
             3: { speedMultiplier: 1.0, spawnRate: 110, notes: this.availableScales.c_major_scale_c4_c5, scoreToAdvance: 4000 },
             4: { speedMultiplier: 1.1, spawnRate: 90,  notes: this.availableScales.chromatic_c4_c5.slice(0,7), scoreToAdvance: 7000 },
-            5: { speedMultiplier: 1.2, spawnRate: 75,  notes: this.availableScales.all_notes, scoreToAdvance: 10000 }, // Last defined level
+            5: { speedMultiplier: 1.2, spawnRate: 75,  notes: this.availableScales.all_notes, scoreToAdvance: 10000 },
         };
         
         this.initializeElements();
         this.bindEvents();
         this.initializeAudio();
         this.populateScaleSelector();
-        this.applyModeSettings(); // Initial UI setup
+        this.applyModeSettings(); 
         this.updateLevelUI();
     }
     
@@ -152,7 +149,7 @@ class MidiKeyboardGame {
         if (this.scaleSelector) {
             this.scaleSelector.addEventListener('change', (event) => this.setScale(event.target.value));
         }
-        document.addEventListener('keydown', (event) => this.handleComputerKeyPress(event));
+        // Removed document.addEventListener for keydown (computer keyboard)
     }
 
     async initializeAudio() {
@@ -231,15 +228,15 @@ class MidiKeyboardGame {
             if (this.livesSection) this.livesSection.style.visibility = 'hidden';
             if (this.levelDisplay) this.levelDisplay.style.visibility = 'hidden';
             this.statusElement.textContent = 'Free Play Mode: Practice any scale!';
-            this.dynamicSpeedFactor = 1.0; // Reset dynamic speed for free play
+            this.dynamicSpeedFactor = 1.0;
         } else { // game mode
             this.gameModeBtn.classList.add('active-mode');
             this.freePlayBtn.classList.remove('active-mode');
             if (this.scoreSection) this.scoreSection.style.visibility = 'visible';
             if (this.livesSection) this.livesSection.style.visibility = 'visible';
             if (this.levelDisplay) this.levelDisplay.style.visibility = 'visible';
-            this.statusElement.textContent = this.midiInput ? `Level ${this.currentLevel}. Ready!` : 'Connect MIDI or use computer keys!';
-            this.applyLevelSettings(); // Applies level speed and resets dynamic factor
+            this.statusElement.textContent = this.midiInput ? `Level ${this.currentLevel}. Ready!` : 'Connect MIDI to play!';
+            this.applyLevelSettings(); 
         }
         this.updateUI(); 
     }
@@ -285,7 +282,7 @@ class MidiKeyboardGame {
             
             const inputs = this.midiAccess.inputs;
             if (inputs.size === 0) {
-                this.statusElement.textContent = 'No MIDI input devices found. You can use computer keys.';
+                this.statusElement.textContent = 'No MIDI input devices found.';
                 this.startGameBtn.disabled = false; 
                 return;
             }
@@ -302,13 +299,13 @@ class MidiKeyboardGame {
                 }
             });
             if (!deviceFound) { 
-                 this.statusElement.textContent = 'Could not connect to a MIDI device. Try computer keys.';
+                 this.statusElement.textContent = 'Could not connect to a MIDI device.';
                  this.startGameBtn.disabled = false;
             }
             
         } catch (error) {
             console.error('MIDI connection failed:', error);
-            this.statusElement.textContent = `MIDI Error: ${error.message}. Using computer keys.`;
+            this.statusElement.textContent = `MIDI Error: ${error.message}.`;
             this.startGameBtn.disabled = false; 
         }
     }
@@ -322,17 +319,9 @@ class MidiKeyboardGame {
         }
     }
 
-    handleComputerKeyPress(event) {
-        if (this.isPaused && event.key.toUpperCase() !== 'P') return; 
-
-        const key = event.key.toUpperCase();
-        if (this.computerKeyToMidi.hasOwnProperty(key) && !event.repeat) {
-            const midiNote = this.computerKeyToMidi[key];
-            this.handleNotePress(midiNote, 'computer');
-        }
-    }
+    // Removed handleComputerKeyPress method
     
-    handleNotePress(midiNote, sourceType) {
+    handleNotePress(midiNote, sourceType) { // sourceType can still be 'midi'
         const noteName = Object.keys(this.noteToMidi).find(key => this.noteToMidi[key] === midiNote);
         if (!noteName) return;
         
@@ -344,7 +333,7 @@ class MidiKeyboardGame {
         }
     }
 
-    handleNoteRelease(midiNote, sourceType) {
+    handleNoteRelease(midiNote, sourceType) { // sourceType can still be 'midi'
         this.stopNote(midiNote);
         const noteName = Object.keys(this.noteToMidi).find(key => this.noteToMidi[key] === midiNote);
         if (noteName) {
@@ -364,21 +353,20 @@ class MidiKeyboardGame {
     }
     
     startGame() {
-        if (this.isGameRunning && !this.isPaused) return; // Prevent re-start if already running and not paused
-        if (this.isGameRunning && this.isPaused) { // If paused, just resume
+        if (this.isGameRunning && !this.isPaused) return; 
+        if (this.isGameRunning && this.isPaused) { 
             this.togglePause();
             return;
         }
-
 
         this.isGameRunning = true;
         this.isPaused = false;
         this.resetScoreAndLives(); 
         
-        if (!this.gameLoopId) { // Only reset level if it's a truly new game start
+        if (!this.gameLoopId) { 
             this.currentLevel = 1;
         }
-        this.applyLevelSettings(); // This will also reset dynamicSpeedFactor
+        this.applyLevelSettings(); 
 
         this.startGameBtn.disabled = true;
         this.pauseGameBtn.disabled = false;
@@ -430,7 +418,7 @@ class MidiKeyboardGame {
         
         this.resetScoreAndLives();
         this.currentLevel = 1; 
-        this.applyLevelSettings(); // Resets dynamic speed factor too
+        this.applyLevelSettings(); 
         
         this.fallingNotes = [];
         this.fallingNotesContainer.innerHTML = ''; 
@@ -439,10 +427,9 @@ class MidiKeyboardGame {
         this.updateUI();
         this.updateLevelUI();
         
-        // Set status based on current mode after reset
         if (this.currentMode === 'game') {
-             this.statusElement.textContent = this.midiInput ? `Level ${this.currentLevel}. Ready!` : 'Connect MIDI or use computer keys!';
-        } else { // Free Play
+             this.statusElement.textContent = this.midiInput ? `Level ${this.currentLevel}. Ready!` : 'Connect MIDI to play!';
+        } else { 
              this.statusElement.textContent = 'Free Play Mode. Practice any scale!';
         }
 
@@ -463,7 +450,6 @@ class MidiKeyboardGame {
         this.maxCombo = 0;
         this.lives = 3;
         this.consecutivePerfectGreatHits = 0; 
-        // dynamicSpeedFactor is reset by applyLevelSettings which should be called after this.
     }
     
     gameUpdate(deltaFactor) { 
@@ -473,12 +459,11 @@ class MidiKeyboardGame {
         
         let currentSpawnRate;
         if (this.currentMode === 'game') {
-            currentSpawnRate = this.levels[this.currentLevel].spawnRate / this.dynamicSpeedFactor; // Spawn faster as dynamic speed increases
-            currentSpawnRate = Math.max(30, currentSpawnRate); // Don't let spawn rate be too fast
+            currentSpawnRate = this.levels[this.currentLevel].spawnRate / this.dynamicSpeedFactor; 
+            currentSpawnRate = Math.max(30, currentSpawnRate); 
         } else {
-            currentSpawnRate = this.noteSpawnRate; // Fixed for free play
+            currentSpawnRate = this.noteSpawnRate; 
         }
-
 
         if (this.framesSinceLastNote >= currentSpawnRate) {
             this.spawnNote();
@@ -644,9 +629,9 @@ class MidiKeyboardGame {
                 this.combo = 1; 
                 this.consecutivePerfectGreatHits = 0; 
                 this.dynamicSpeedFactor = Math.max(this.minDynamicSpeedFactor, this.dynamicSpeedFactor - 0.15); 
-                if (this.dynamicSpeedFactor < 1.0 && this.levels[this.currentLevel].speedMultiplier >=1.0) { // Don't go below level base if level base is >=1
+                if (this.dynamicSpeedFactor < 1.0 && this.levels[this.currentLevel].speedMultiplier >=1.0) { 
                     this.dynamicSpeedFactor = 1.0; 
-                } else if (this.dynamicSpeedFactor < this.levels[this.currentLevel].speedMultiplier) { // Don't go below level base in general
+                } else if (this.dynamicSpeedFactor < this.levels[this.currentLevel].speedMultiplier) { 
                      this.dynamicSpeedFactor = this.levels[this.currentLevel].speedMultiplier;
                 }
                 console.log("Speed decreased by miss/wrong press:", this.dynamicSpeedFactor);
@@ -749,7 +734,7 @@ class MidiKeyboardGame {
     
     updateUI() {
         this.scoreElement.textContent = this.score;
-        this.comboElement.textContent = this.combo > 1 ? `x${this.combo}` : ''; // Only show if combo > 1
+        this.comboElement.textContent = this.combo > 1 ? `x${this.combo}` : ''; 
         if (this.currentMode === 'game') {
              this.livesElement.textContent = '♥'.repeat(Math.max(0,this.lives)) + '♡'.repeat(Math.max(0, 3 - this.lives));
         }
@@ -763,13 +748,12 @@ class MidiKeyboardGame {
 
     applyLevelSettings() {
         if (this.currentMode !== 'game' || !this.levels[this.currentLevel]) {
-            this.dynamicSpeedFactor = 1.0; // Default if no level config (e.g., free play was active)
+            this.dynamicSpeedFactor = 1.0; 
             return;
         }
         this.dynamicSpeedFactor = 1.0; 
         this.consecutivePerfectGreatHits = 0;
         this.updateLevelUI();
-        // console.log(`Level ${this.currentLevel} settings applied. Base Speed Multiplier: ${this.levels[this.currentLevel].speedMultiplier}, Dynamic Factor: ${this.dynamicSpeedFactor}`);
     }
 
     advanceLevel() {
@@ -783,7 +767,6 @@ class MidiKeyboardGame {
                 this.currentLevel++;
                 this.applyLevelSettings(); 
                 this.statusElement.textContent = `Level Up! Now Level ${this.currentLevel}!`;
-                // console.log(`Advanced to Level ${this.currentLevel}. Score: ${this.score}`);
             } else {
                 this.statusElement.textContent = `Congratulations! You've beaten all levels! Final Score: ${this.score}, Max Combo: x${this.maxCombo}`;
                 this.isGameRunning = false; 
@@ -822,7 +805,6 @@ class MidiKeyboardGame {
     }
 }
 
-// Initialize the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     const game = new MidiKeyboardGame();
     window.midiGame = game; 

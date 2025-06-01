@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MIDI Keyboard Practice Game</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="game-container">
         <!-- Title and instructions -->
@@ -13,7 +15,6 @@
             <h1>🎹 MIDI Keyboard Practice</h1>
             <p class="game-subtitle">Master your timing and musical skills!</p>
         </div>
-
         <!-- Header with game stats -->
         <div class="game-header">
             <div class="score-section">
@@ -38,37 +39,47 @@
         <!-- Virtual keyboard representation -->
         <div class="keyboard-container">
             <div class="keyboard" id="keyboard">
-                <!-- White keys (C3 to C5 range - 15 white keys) -->
                 <div class="white-keys">
-                    <div class="key white-key" data-note="C3" data-midi="48"><span class="key-label">C3</span><span class="computer-key-hint"></span></div>
-                    <div class="key white-key" data-note="D3" data-midi="50"><span class="key-label">D3</span><span class="computer-key-hint"></span></div>
-                    <div class="key white-key" data-note="E3" data-midi="52"><span class="key-label">E3</span><span class="computer-key-hint"></span></div>
-                    <div class="key white-key" data-note="F3" data-midi="53"><span class="key-label">F3</span><span class="computer-key-hint"></span></div>
-                    <div class="key white-key" data-note="G3" data-midi="55"><span class="key-label">G3</span><span class="computer-key-hint"></span></div>
-                    <div class="key white-key" data-note="A3" data-midi="57"><span class="key-label">A3</span><span class="computer-key-hint"></span></div>
-                    <div class="key white-key" data-note="B3" data-midi="59"><span class="key-label">B3</span><span class="computer-key-hint"></span></div>
-                    <div class="key white-key" data-note="C4" data-midi="60"><span class="key-label">C4</span><span class="computer-key-hint">A</span></div>
-                    <div class="key white-key" data-note="D4" data-midi="62"><span class="key-label">D4</span><span class="computer-key-hint">S</span></div>
-                    <div class="key white-key" data-note="E4" data-midi="64"><span class="key-label">E4</span><span class="computer-key-hint">D</span></div>
-                    <div class="key white-key" data-note="F4" data-midi="65"><span class="key-label">F4</span><span class="computer-key-hint">F</span></div>
-                    <div class="key white-key" data-note="G4" data-midi="67"><span class="key-label">G4</span><span class="computer-key-hint">G</span></div>
-                    <div class="key white-key" data-note="A4" data-midi="69"><span class="key-label">A4</span><span class="computer-key-hint">H</span></div>
-                    <div class="key white-key" data-note="B4" data-midi="71"><span class="key-label">B4</span><span class="computer-key-hint">J</span></div>
-                    <div class="key white-key" data-note="C5" data-midi="72"><span class="key-label">C5</span><span class="computer-key-hint">K</span></div>
-                </div>
-                
-                <!-- Black keys (C3 to C5 range - 10 black keys) -->
-                <div class="black-keys">
-                    <div class="key black-key" data-note="C#3" data-midi="49" data-position="0"><span class="key-label">C#3</span><span class="computer-key-hint"></span></div>
-                    <div class="key black-key" data-note="D#3" data-midi="51" data-position="1"><span class="key-label">D#3</span><span class="computer-key-hint"></span></div>
-                    <div class="key black-key" data-note="F#3" data-midi="54" data-position="3"><span class="key-label">F#3</span><span class="computer-key-hint"></span></div>
-                    <div class="key black-key" data-note="G#3" data-midi="56" data-position="4"><span class="key-label">G#3</span><span class="computer-key-hint"></span></div>
-                    <div class="key black-key" data-note="A#3" data-midi="58" data-position="5"><span class="key-label">A#3</span><span class="computer-key-hint"></span></div>
-                    <div class="key black-key" data-note="C#4" data-midi="61" data-position="7"><span class="key-label">C#4</span><span class="computer-key-hint">W</span></div>
-                    <div class="key black-key" data-note="D#4" data-midi="63" data-position="8"><span class="key-label">D#4</span><span class="computer-key-hint">E</span></div>
-                    <div class="key black-key" data-note="F#4" data-midi="66" data-position="10"><span class="key-label">F#4</span><span class="computer-key-hint">T</span></div>
-                    <div class="key black-key" data-note="G#4" data-midi="68" data-position="11"><span class="key-label">G#4</span><span class="computer-key-hint">Y</span></div>
-                    <div class="key black-key" data-note="A#4" data-midi="70" data-position="12"><span class="key-label">A#4</span><span class="computer-key-hint">U</span></div>
+                    <!-- White keys (C3 to C5 range - 15 white keys) -->
+                    <div class="key white-key" data-note="C3" data-midi="48"><span class="key-label">C3</span></div>
+                    <div class="key white-key" data-note="D3" data-midi="50"><span class="key-label">D3</span></div>
+                    <div class="key white-key" data-note="E3" data-midi="52"><span class="key-label">E3</span></div>
+                    <div class="key white-key" data-note="F3" data-midi="53"><span class="key-label">F3</span></div>
+                    <div class="key white-key" data-note="G3" data-midi="55"><span class="key-label">G3</span></div>
+                    <div class="key white-key" data-note="A3" data-midi="57"><span class="key-label">A3</span></div>
+                    <div class="key white-key" data-note="B3" data-midi="59"><span class="key-label">B3</span></div>
+                    <div class="key white-key" data-note="C4" data-midi="60"><span class="key-label">C4</span></div>
+                    <div class="key white-key" data-note="D4" data-midi="62"><span class="key-label">D4</span></div>
+                    <div class="key white-key" data-note="E4" data-midi="64"><span class="key-label">E4</span></div>
+                    <div class="key white-key" data-note="F4" data-midi="65"><span class="key-label">F4</span></div>
+                    <div class="key white-key" data-note="G4" data-midi="67"><span class="key-label">G4</span></div>
+                    <div class="key white-key" data-note="A4" data-midi="69"><span class="key-label">A4</span></div>
+                    <div class="key white-key" data-note="B4" data-midi="71"><span class="key-label">B4</span></div>
+                    <div class="key white-key" data-note="C5" data-midi="72"><span class="key-label">C5</span></div>
+
+                    <!-- Black keys (C3 to C5 range - 10 black keys) - MOVED INSIDE .white-keys -->
+                    <div class="black-keys">
+                        <div class="key black-key" data-note="C#3" data-midi="49" data-position="0"><span
+                                class="key-label">C#3</span></div>
+                        <div class="key black-key" data-note="D#3" data-midi="51" data-position="1"><span
+                                class="key-label">D#3</span></div>
+                        <div class="key black-key" data-note="F#3" data-midi="54" data-position="3"><span
+                                class="key-label">F#3</span></div>
+                        <div class="key black-key" data-note="G#3" data-midi="56" data-position="4"><span
+                                class="key-label">G#3</span></div>
+                        <div class="key black-key" data-note="A#3" data-midi="58" data-position="5"><span
+                                class="key-label">A#3</span></div>
+                        <div class="key black-key" data-note="C#4" data-midi="61" data-position="7"><span
+                                class="key-label">C#4</span></div>
+                        <div class="key black-key" data-note="D#4" data-midi="63" data-position="8"><span
+                                class="key-label">D#4</span></div>
+                        <div class="key black-key" data-note="F#4" data-midi="66" data-position="10"><span
+                                class="key-label">F#4</span></div>
+                        <div class="key black-key" data-note="G#4" data-midi="68" data-position="11"><span
+                                class="key-label">G#4</span></div>
+                        <div class="key black-key" data-note="A#4" data-midi="70" data-position="12"><span
+                                class="key-label">A#4</span></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -78,7 +89,7 @@
             <div class="instruction-group">
                 <h3>🎮 How to Play</h3>
                 <ul>
-                    <li>Connect your MIDI keyboard or use computer keys shown on the virtual keyboard.</li>
+                    <li>Connect your MIDI keyboard.</li>
                     <li>Press the correct key when notes reach the <span class="highlight">HIT ZONE</span>.</li>
                     <li>Timing accuracy (Perfect, Great, Good) affects your score.</li>
                     <li>Game Mode: Progress through levels, 3 lives.</li>
@@ -89,7 +100,6 @@
                 <h3>🎹 MIDI Range / Keys</h3>
                 <div class="key-mapping">
                     <div>Range: <span class="key-hint">C3 to C5 (25 keys)</span></div>
-                    <div>Computer Keys (C4 Octave): <span class="key-hint">A S D F G H J K</span> (white), <span class="key-hint">W E T Y U</span> (black)</div>
                 </div>
             </div>
         </div>
@@ -118,9 +128,10 @@
         </div>
 
         <!-- Status messages -->
-        <div class="status" id="status">Click "Connect MIDI" to begin, or use computer keys!</div>
+        <div class="status" id="status">Click "Connect MIDI" to begin!</div>
     </div>
 
     <script src="script.js"></script>
 </body>
+
 </html>

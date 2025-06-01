@@ -19,9 +19,9 @@
     --shadow-medium: 0 8px 16px rgba(0, 0, 0, 0.15);
     --shadow-heavy: 0 24px 48px rgba(0, 0, 0, 0.2);
     --key-width-desktop: 55px;
-    --black-key-width-desktop: 38px;
-    --key-width-mobile: 42px; /* Adjusted for better mobile view */
-    --black-key-width-mobile: 28px; /* Adjusted for better mobile view */
+    --black-key-width-desktop: 34px; 
+    --key-width-mobile: 42px; 
+    --black-key-width-mobile: 25px; 
 }
 
 body {
@@ -99,7 +99,7 @@ body::before {
     margin-bottom: 24px;
     font-size: 1.0em;
     font-weight: 600;
-    position: relative; /* For hitFeedback positioning */
+    position: relative; 
 }
 
 .score-section {
@@ -118,7 +118,7 @@ body::before {
 }
 
 .level {
-    background-color: rgba(100, 200, 255, 0.2); /* Light blue tint for level */
+    background-color: rgba(100, 200, 255, 0.2); 
 }
 
 #lives-display {
@@ -131,7 +131,7 @@ body::before {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    top: -5px; /* Position it slightly above the score line */
+    top: -5px; 
     font-size: 1.4em;
     font-weight: bold;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -152,7 +152,7 @@ body::before {
 
 .game-area {
     position: relative;
-    height: 400px; /* Slightly reduced height */
+    height: 400px; 
     background: rgba(0, 0, 0, 0.25);
     border-radius: 18px;
     margin-bottom: 24px;
@@ -171,11 +171,11 @@ body::before {
 
 .hit-zone {
     position: absolute;
-    bottom: 45px; /* Align with hit-line related calculations */
+    bottom: 45px; 
     left: 0;
     right: 0;
-    height: 20px; /* Visible height of the zone */
-    background: rgba(0, 188, 212, 0.2); /* Semi-transparent cyan */
+    height: 20px; 
+    background: rgba(0, 188, 212, 0.2); 
     z-index: 0;
     border-top: 1px dashed rgba(0, 188, 212, 0.5);
     border-bottom: 1px dashed rgba(0, 188, 212, 0.5);
@@ -183,13 +183,13 @@ body::before {
 
 .hit-line {
     position: absolute;
-    bottom: 50px; /* Position from the bottom of game-area, center of hit-zone */
+    bottom: 50px; 
     left: 0;
     right: 0;
     height: 4px;
-    background-color: #00BCD4; /* Bright Cyan */
-    box-shadow: 0 0 10px #00BCD4, 0 0 15px #00BCD4; /* Glow effect */
-    z-index: 1; /* Above falling notes, but below hit-zone visual if needed */
+    background-color: #00BCD4; 
+    box-shadow: 0 0 10px #00BCD4, 0 0 15px #00BCD4; 
+    z-index: 1; 
 }
 
 .falling-bar {
@@ -238,25 +238,26 @@ body::before {
     border-radius: 12px;
     padding: 15px;
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1);
-    overflow: visible; /* Allow keys to pop out slightly */
-    display: flex; /* Center the white-keys container */
-    justify-content: center; /* Center the white-keys container */
+    overflow: hidden; 
+    display: flex; 
+    justify-content: center; 
 }
 
 .white-keys {
     display: flex;
-    position: relative; /* For black keys positioning context */
+    position: relative; 
     z-index: 1;
 }
 
 .black-keys {
     position: absolute;
-    top: 15px; /* Same as keyboard padding */
-    left: 0; /* Relative to white-keys container now */
-    height: 70px;
-    z-index: 2;
-    pointer-events: none;
-    /* Width will be determined by the white keys it sits on */
+    top: 0; 
+    left: 0; 
+    width: 100%; /* UPDATED: Ensure container has width */
+    height: 70px; 
+    z-index: 2; 
+    pointer-events: none; 
+    /* overflow: hidden; /* Optional: remove if keys might be slightly clipped by it */
 }
 
 .key {
@@ -265,10 +266,10 @@ body::before {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end; /* Push label to bottom */
+    justify-content: flex-end; 
     user-select: none;
     position: relative;
-    padding-bottom: 8px; /* Space for label */
+    padding-bottom: 8px; 
 }
 
 .white-key {
@@ -278,14 +279,22 @@ body::before {
     border: 1px solid #b0b0b0;
     border-bottom-width: 3px;
     border-radius: 0 0 6px 6px;
-    margin: 0 1px;
+    margin: 0 1px; 
     color: #333;
     box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.8);
 }
 
+.white-key:first-child {
+    margin-left: 0;
+}
+
+.white-key:last-child {
+    margin-right: 0;
+}
+
 .black-key {
-    position: absolute; /* Positioned by JS or specific CSS rules */
-    width: var(--black-key-width-desktop);
+    position: absolute; 
+    width: var(--black-key-width-desktop); 
     height: 70px;
     background: linear-gradient(to bottom, #4a4a4a 0%, #2c2c2c 50%, #1a1a1a 100%);
     border: 1px solid #000;
@@ -294,20 +303,19 @@ body::before {
     color: white;
     font-size: 0.8em;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
-    pointer-events: auto; /* Make black keys clickable */
+    pointer-events: auto; 
 }
 
-/* Black key positioning relative to the start of the white keys container */
-.black-key[data-position="0"]  { left: calc(var(--key-width-desktop) * 1 - var(--black-key-width-desktop) * 0.75 - 1px); } /* C#3 (between C3-D3) */
-.black-key[data-position="1"]  { left: calc(var(--key-width-desktop) * 2 - var(--black-key-width-desktop) * 0.75 - 1px); } /* D#3 */
-.black-key[data-position="3"]  { left: calc(var(--key-width-desktop) * 4 - var(--black-key-width-desktop) * 0.75 - 1px); } /* F#3 */
-.black-key[data-position="4"]  { left: calc(var(--key-width-desktop) * 5 - var(--black-key-width-desktop) * 0.75 - 1px); } /* G#3 */
-.black-key[data-position="5"]  { left: calc(var(--key-width-desktop) * 6 - var(--black-key-width-desktop) * 0.75 - 1px); } /* A#3 */
-.black-key[data-position="7"]  { left: calc(var(--key-width-desktop) * 8 - var(--black-key-width-desktop) * 0.75 - 1px); } /* C#4 */
-.black-key[data-position="8"]  { left: calc(var(--key-width-desktop) * 9 - var(--black-key-width-desktop) * 0.75 - 1px); } /* D#4 */
-.black-key[data-position="10"] { left: calc(var(--key-width-desktop) * 11 - var(--black-key-width-desktop) * 0.75 - 1px); } /* F#4 */
-.black-key[data-position="11"] { left: calc(var(--key-width-desktop) * 12 - var(--black-key-width-desktop) * 0.75 - 1px); } /* G#4 */
-.black-key[data-position="12"] { left: calc(var(--key-width-desktop) * 13 - var(--black-key-width-desktop) * 0.75 - 1px); } /* A#4 */
+.black-key[data-position="0"]  { left: calc(var(--key-width-desktop) * 0.5 + 1px - var(--black-key-width-desktop) / 2); } 
+.black-key[data-position="1"]  { left: calc(var(--key-width-desktop) * 1.5 + 2px - var(--black-key-width-desktop) / 2); } 
+.black-key[data-position="3"]  { left: calc(var(--key-width-desktop) * 3.5 + 4px - var(--black-key-width-desktop) / 2); } 
+.black-key[data-position="4"]  { left: calc(var(--key-width-desktop) * 4.5 + 5px - var(--black-key-width-desktop) / 2); } 
+.black-key[data-position="5"]  { left: calc(var(--key-width-desktop) * 5.5 + 6px - var(--black-key-width-desktop) / 2); } 
+.black-key[data-position="7"]  { left: calc(var(--key-width-desktop) * 7.5 + 8px - var(--black-key-width-desktop) / 2); } 
+.black-key[data-position="8"]  { left: calc(var(--key-width-desktop) * 8.5 + 9px - var(--black-key-width-desktop) / 2); } 
+.black-key[data-position="10"] { left: calc(var(--key-width-desktop) * 10.5 + 11px - var(--black-key-width-desktop) / 2); }
+.black-key[data-position="11"] { left: calc(var(--key-width-desktop) * 11.5 + 12px - var(--black-key-width-desktop) / 2); }
+.black-key[data-position="12"] { left: calc(var(--key-width-desktop) * 12.5 + 13px - var(--black-key-width-desktop) / 2); }
 
 
 .key-label {
@@ -322,23 +330,7 @@ body::before {
     font-size: 0.75em;
 }
 
-.computer-key-hint {
-    position: absolute;
-    top: 5px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.7em;
-    font-weight: bold;
-    color: #555;
-    background-color: rgba(255,255,255,0.3);
-    padding: 1px 3px;
-    border-radius: 2px;
-}
-.black-key .computer-key-hint {
-    color: #ccc;
-    background-color: rgba(0,0,0,0.3);
-}
-
+/* Removed .computer-key-hint and .black-key .computer-key-hint styles */
 
 .key:hover {
     filter: brightness(1.1);
@@ -379,15 +371,13 @@ body::before {
   50% { transform: translateX(3px) rotate(2deg); background-color: var(--miss-color); }
 }
 
-.key.scale-active { /* Highlight keys in the current practice scale */
-    /* Use a subtle border or background change */
+.key.scale-active { 
     border-left: 3px solid var(--hit-color-good);
     border-right: 3px solid var(--hit-color-good);
 }
 .black-key.scale-active {
     border-left: 2px solid var(--hit-color-good);
     border-right: 2px solid var(--hit-color-good);
-    /* Or change background gradient slightly */
 }
 
 
@@ -489,7 +479,7 @@ body::before {
     .game-header { flex-direction: column; gap: 12px; align-items: center; text-align: center; }
     .score-section { gap: 10px; flex-wrap: wrap; justify-content: center; }
     .hit-feedback { position: static; transform: none; margin-top: 8px; }
-    .controls { flex-direction: column; } /* Stack controls vertically */
+    .controls { flex-direction: column; } 
     .game-modes, .scale-selection, .volume-control { width: 100%; justify-content: center; }
     .instructions { grid-template-columns: 1fr; gap: 18px; padding: 18px; }
 }
@@ -507,37 +497,33 @@ body::before {
 
     .keyboard-container { padding: 10px; }
     .keyboard { 
-        height: 120px; /* Adjust height for smaller keys */
+        height: 120px; 
         padding: 10px; 
-        /* overflow-x: auto; /* Allow horizontal scrolling if keyboard too wide */
-        /* white-space: nowrap; /* Prevent white keys from wrapping */
     }
-    /* No transform: scale() on .keyboard directly to avoid double scaling */
 
     .white-key {
-        width: var(--key-width-mobile);
+        width: var(--key-width-mobile); 
         height: 95px;
-        margin: 0 0.5px; /* Slightly reduce margin */
+        margin: 0 0.5px; 
     }
     .black-key {
-        width: var(--black-key-width-mobile);
+        width: var(--black-key-width-mobile); 
         height: 60px;
     }
     .key-label { font-size: 0.7em; bottom: 4px;}
     .black-key .key-label { font-size: 0.6em; }
-    .computer-key-hint { font-size: 0.6em; top: 3px; }
+    /* .computer-key-hint removed */
 
-    /* Recalculate black key positions for mobile key widths */
-    .black-key[data-position="0"]  { left: calc(var(--key-width-mobile) * 1 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
-    .black-key[data-position="1"]  { left: calc(var(--key-width-mobile) * 2 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
-    .black-key[data-position="3"]  { left: calc(var(--key-width-mobile) * 4 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
-    .black-key[data-position="4"]  { left: calc(var(--key-width-mobile) * 5 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
-    .black-key[data-position="5"]  { left: calc(var(--key-width-mobile) * 6 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
-    .black-key[data-position="7"]  { left: calc(var(--key-width-mobile) * 8 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
-    .black-key[data-position="8"]  { left: calc(var(--key-width-mobile) * 9 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
-    .black-key[data-position="10"] { left: calc(var(--key-width-mobile) * 11 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
-    .black-key[data-position="11"] { left: calc(var(--key-width-mobile) * 12 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
-    .black-key[data-position="12"] { left: calc(var(--key-width-mobile) * 13 - var(--black-key-width-mobile) * 0.75 - 0.5px); }
+    .black-key[data-position="0"]  { left: calc(var(--key-width-mobile) * 0.5 + 1px - var(--black-key-width-mobile) / 2); }
+    .black-key[data-position="1"]  { left: calc(var(--key-width-mobile) * 1.5 + 2px - var(--black-key-width-mobile) / 2); }
+    .black-key[data-position="3"]  { left: calc(var(--key-width-mobile) * 3.5 + 4px - var(--black-key-width-mobile) / 2); }
+    .black-key[data-position="4"]  { left: calc(var(--key-width-mobile) * 4.5 + 5px - var(--black-key-width-mobile) / 2); }
+    .black-key[data-position="5"]  { left: calc(var(--key-width-mobile) * 5.5 + 6px - var(--black-key-width-mobile) / 2); }
+    .black-key[data-position="7"]  { left: calc(var(--key-width-mobile) * 7.5 + 8px - var(--black-key-width-mobile) / 2); }
+    .black-key[data-position="8"]  { left: calc(var(--key-width-mobile) * 8.5 + 9px - var(--black-key-width-mobile) / 2); }
+    .black-key[data-position="10"] { left: calc(var(--key-width-mobile) * 10.5 + 11px - var(--black-key-width-mobile) / 2); }
+    .black-key[data-position="11"] { left: calc(var(--key-width-mobile) * 11.5 + 12px - var(--black-key-width-mobile) / 2); }
+    .black-key[data-position="12"] { left: calc(var(--key-width-mobile) * 12.5 + 13px - var(--black-key-width-mobile) / 2); }
 
     .btn { padding: 10px 18px; font-size: 0.8em; }
     .instruction-group h3 { font-size: 0.9em; }
@@ -545,27 +531,56 @@ body::before {
     .key-hint { padding: 2px 4px; font-size: 0.8em;}
 }
 
+@media (max-width: 480px) {
+    :root {
+        --key-width-mobile: 35px; 
+        --black-key-width-mobile: 21px; 
+    }
+    
+    .keyboard {
+        height: 100px;
+        padding: 8px;
+    }
+    
+    .white-key {
+        height: 90px; 
+    }
+    
+    .black-key {
+        height: 60px;
+    }
+    
+    .key-label {
+        font-size: 0.7em;
+    }
+    
+    .black-key .key-label {
+        font-size: 0.6em;
+    }
+    /* .computer-key-hint removed */
+}
+
 
 /* Particle effects */
 .particle {
     position: absolute;
-    width: 8px; /* Smaller particles */
+    width: 8px; 
     height: 8px;
     background: radial-gradient(circle, #FFD700 0%, #FFA500 70%, #FF8C00 100%);
     border-radius: 50%;
     pointer-events: none;
     animation: particle 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     box-shadow: 0 0 6px rgba(255,215,0,0.5), 0 0 3px rgba(255,215,0,0.3);
-    z-index: 10; /* Ensure particles are above notes */
+    z-index: 10; 
 }
 @keyframes particle {
     0% { opacity: 1; transform: scale(1) translate(0,0); }
     100% { opacity: 0; transform: scale(0.3) translate(var(--dx), var(--dy)); }
 }
 
-.keyboard-container::before, .game-container::before { /* Simplified pseudo-elements */
+.keyboard-container::before, .game-container::before { 
     content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px;
-    border-radius: inherit; /* Inherit from parent */
+    border-radius: inherit; 
     z-index: -1;
 }
 .keyboard-container::before { background: linear-gradient(45deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.08) 100%); opacity: 0.6; }
