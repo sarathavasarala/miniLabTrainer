@@ -146,6 +146,16 @@
             <button id="startGame" class="btn" disabled>Start Game</button>
             <button id="pauseGame" class="btn" disabled>Pause</button>
             <button id="resetGame" class="btn">Reset</button>
+            <div class="game-modes">
+                <button id="freePlayBtn" class="btn mode-btn">Free Play</button>
+                <button id="gameModeBtn" class="btn mode-btn active-mode">Game Mode</button>
+            </div>
+            <div class="scale-selection">
+                <label for="scaleSelector">Practice Scale:</label>
+                <select id="scaleSelector" class="control-select">
+                    <!-- Options will be populated by JS -->
+                </select>
+            </div>
             <div class="volume-control">
                 <label for="volumeSlider">Volume: </label>
                 <input type="range" id="volumeSlider" min="0" max="100" value="30">
