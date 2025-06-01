@@ -1,37 +1,48 @@
 class MidiKeyboardGame {
     constructor() {
+        // Game State
         this.score = 0;
         this.combo = 1;
+        this.maxCombo = 0;
         this.lives = 3;
+        this.currentLevel = 1;
         this.isGameRunning = false;
         this.isPaused = false;
+        this.currentMode = 'game'; // 'game' or 'free'
+
+        // MIDI & Audio
         this.midiAccess = null;
         this.midiInput = null;
-        this.fallingNotes = [];
-        this.gameSpeed = 1; // pixels per frame
-        this.noteSpawnRate = 120; // frames between notes (2 seconds at 60fps)
-        this.framesSinceLastNote = 0;
-        this.barHeight = 60;
-        this.hitTolerance = 5; // Pixels for hit accuracy
-        this.barWidth = 50; // Width of the falling bars
-        this.gameLoop = null;
-        this.currentMode = 'free'; // Default to Free Play mode
-
-        this.availableScales = {
-            'all_notes': this.practiceNotes, // Existing full range
-            'c_major_pentascale': ['C4', 'D4', 'E4', 'G4', 'A4', 'C5'],
-            'g_major_pentascale': ['G3', 'A3', 'B3', 'D4', 'E4', 'G4'],
-            'chromatic_c4_c5': ['C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4', 'A#4', 'B4', 'C5']
-        };
-        this.currentScale = 'all_notes';
-        
-        // Audio setup
         this.audioContext = null;
         this.masterVolume = null;
-        this.activeOscillators = new Map(); // Track active notes to prevent overlapping
-        
-        // Note configuration - C3 to C5 range (25 keys total) - Arturia MiniLab 3 layout
-        this.practiceNotes = [
+        this.activeOscillators = new Map();
+
+        // Game Mechanics
+        this.fallingNotes = [];
+        this.gameSpeed = 1; // Base speed, modified by level
+        this.noteSpawnRate = 120; // Base rate, modified by level
+        this.framesSinceLastNote = 0;
+        this.barHeight = 50;
+        this.barWidth = 45; // Default width of falling bars
+
+        // Hit Timing (pixels from hitLineY for bottom of the bar)
+        this.hitTolerances = {
+            perfect: 8,  // Smaller window for perfect
+            great: 16,
+            good: 24
+        };
+        this.hitScores = {
+            perfect: 100,
+            great: 75,
+            good: 50
+        };
+
+        // Animation Loop
+        this.gameLoopId = null;
+        this.lastFrameTime = 0;
+
+        // Note & Scale Configuration
+        this.practiceNotes = [ // C3 to C5 range
             'C3', 'C#3', 'D3', 'D#3', 'E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3',
             'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4', 'A#4', 'B4',
             'C5'
@@ -43,174 +54,81 @@ class MidiKeyboardGame {
             'G4': 67, 'G#4': 68, 'A4': 69, 'A#4': 70, 'B4': 71,
             'C5': 72
         };
+        this.computerKeyToMidi = { // C4 Octave + C5
+            'A': 60, 'W': 61, 'S': 62, 'E': 63, 'D': 64, 'F': 65, 'T': 66, 
+            'G': 67, 'Y': 68, 'H': 69, 'U': 70, 'J': 71, 'K': 72 // K for C5
+        };
 
-        this.computerKeyToMidi = {
-            'A': 60, // C4
-            'W': 61, // C#4
-            'S': 62, // D4
-            'E': 63, // D#4
-            'D': 64, // E4
-            'F': 65, // F4
-            'T': 66, // F#4
-            'G': 67, // G4
-            'Y': 68, // G#4
-            'H': 69, // A4
-            'U': 70, // A#4
-            'J': 71  // B4
+        this.availableScales = {
+            'all_notes': this.practiceNotes,
+            'c_major_pentascale': ['C4', 'D4', 'E4', 'G4', 'A4', 'C5'],
+            'g_major_pentascale': ['G3', 'A3', 'B3', 'D4', 'E4', 'G4'],
+            'c_major_scale_c4_c5': ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'],
+            'chromatic_c4_c5': this.practiceNotes.slice(this.practiceNotes.indexOf('C4'))
+        };
+        this.currentScaleKey = 'all_notes';
+
+        // Level Configuration
+        this.levels = {
+            1: { speed: 0.8, spawnRate: 150, notes: this.availableScales.c_major_pentascale.slice(0,3) }, // C4, D4, E4
+            2: { speed: 1.0, spawnRate: 130, notes: this.availableScales.c_major_pentascale },
+            3: { speed: 1.2, spawnRate: 110, notes: this.availableScales.c_major_scale_c4_c5 },
+            4: { speed: 1.4, spawnRate: 90,  notes: this.availableScales.chromatic_c4_c5.slice(0,7) }, // C4 to G4 chromatic
+            5: { speed: 1.6, spawnRate: 75,  notes: this.availableScales.all_notes },
+            // Add more levels
         };
         
         this.initializeElements();
         this.bindEvents();
         this.initializeAudio();
-    }
-    
-    async initializeAudio() {
-        try {
-            // Create audio context
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            
-            // Create master volume control
-            this.masterVolume = this.audioContext.createGain();
-            this.masterVolume.gain.value = 0.3; // Set to 30% volume
-            this.masterVolume.connect(this.audioContext.destination);
-            
-            console.log('Audio system initialized successfully');
-        } catch (error) {
-            console.error('Failed to initialize audio:', error);
-        }
-    }
-    
-    // Convert MIDI note number to frequency
-    midiToFrequency(midiNote) {
-        return 440 * Math.pow(2, (midiNote - 69) / 12);
-    }
-    
-    // Play a note with the given MIDI number
-    playNote(midiNote, duration = 0.5) {
-        if (!this.audioContext) return;
-        
-        // Resume audio context if it's suspended (browser autoplay policy)
-        if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume();
-        }
-        
-        const frequency = this.midiToFrequency(midiNote);
-        const noteKey = midiNote.toString();
-        
-        // Stop any existing note with the same key
-        this.stopNote(midiNote);
-        
-        // Create oscillator for the main tone
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        
-        // Set up a more pleasant piano-like sound using multiple harmonics
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
-        
-        // Create envelope for natural piano attack/decay
-        const now = this.audioContext.currentTime;
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.8, now + 0.01); // Quick attack
-        gainNode.gain.exponentialRampToValueAtTime(0.3, now + 0.1); // Decay
-        gainNode.gain.exponentialRampToValueAtTime(0.1, now + duration * 0.7); // Sustain
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration); // Release
-        
-        // Connect the audio graph
-        oscillator.connect(gainNode);
-        gainNode.connect(this.masterVolume);
-        
-        // Store the oscillator so we can stop it later
-        this.activeOscillators.set(noteKey, { oscillator, gainNode });
-        
-        // Start the oscillator
-        oscillator.start(now);
-        oscillator.stop(now + duration);
-        
-        // Clean up after the note ends
-        oscillator.onended = () => {
-            this.activeOscillators.delete(noteKey);
-        };
-    }
-    
-    // Stop a specific note
-    stopNote(midiNote) {
-        const noteKey = midiNote.toString();
-        const activeNote = this.activeOscillators.get(noteKey);
-        
-        if (activeNote) {
-            const now = this.audioContext.currentTime;
-            // Quick fade out to avoid clicks
-            activeNote.gainNode.gain.cancelScheduledValues(now);
-            activeNote.gainNode.gain.setValueAtTime(activeNote.gainNode.gain.value, now);
-            activeNote.gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
-            
-            activeNote.oscillator.stop(now + 0.05);
-            this.activeOscillators.delete(noteKey);
-        }
+        this.populateScaleSelector();
+        this.applyModeSettings(); // Initial UI setup
+        this.updateLevelUI();
     }
     
     initializeElements() {
         this.scoreElement = document.getElementById('score');
         this.comboElement = document.getElementById('combo');
         this.livesElement = document.getElementById('lives-display');
+        this.levelElement = document.getElementById('level');
         this.statusElement = document.getElementById('status');
         this.gameArea = document.getElementById('gameArea');
         this.fallingNotesContainer = document.getElementById('fallingNotes');
         this.keyboard = document.getElementById('keyboard');
+        this.hitFeedbackElement = document.getElementById('hitFeedback');
+        
+        this.gameAreaRect = this.gameArea.getBoundingClientRect();
+        this.hitLineY = this.gameAreaRect.height - 50; // 50px from bottom (center of visual hit-line)
 
-        // Calculate hitLineY based on gameArea's actual height at init
-        // Ensure gameArea has its dimensions set by CSS before this runs.
-        if (this.gameArea) { // gameArea might not be available in tests if not fully initialized
-            this.gameAreaRect = this.gameArea.getBoundingClientRect();
-            this.hitLineY = this.gameAreaRect.height - 50; // 50px from the bottom
-        } else {
-            // Fallback for environments where gameArea might not be fully initialized (e.g. some test scenarios)
-            // This assumes the CSS height of gameArea is 420px.
-            this.hitLineY = 420 - 50;
-            console.warn("gameArea not fully initialized during hitLineY calculation, using default height.");
-        }
-
-
-        // Score/Lives sections for show/hide
         this.scoreSection = document.querySelector('.score-section');
         this.livesSection = document.querySelector('.lives-section');
-        
-        // Buttons
+        this.levelDisplay = document.querySelector('.level'); // Level display in header
+
         this.connectMidiBtn = document.getElementById('connectMidi');
         this.startGameBtn = document.getElementById('startGame');
         this.pauseGameBtn = document.getElementById('pauseGame');
         this.resetGameBtn = document.getElementById('resetGame');
         
-        // Volume control
         this.volumeSlider = document.getElementById('volumeSlider');
         this.volumeValue = document.getElementById('volumeValue');
 
-        // Game mode buttons
         this.freePlayBtn = document.getElementById('freePlayBtn');
         this.gameModeBtn = document.getElementById('gameModeBtn');
-
-        // Scale selector
         this.scaleSelector = document.getElementById('scaleSelector');
     }
 
     populateScaleSelector() {
         if (!this.scaleSelector) return;
-
-        // Clear existing options first (if any, e.g., from HTML)
         this.scaleSelector.innerHTML = '';
-
         for (const scaleKey in this.availableScales) {
             const option = document.createElement('option');
             option.value = scaleKey;
-            // Create a more user-friendly name: replace underscores with spaces, capitalize words
-            let friendlyName = scaleKey.replace(/_/g, ' ');
-            friendlyName = friendlyName.replace(/\b\w/g, l => l.toUpperCase());
+            let friendlyName = scaleKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             option.textContent = friendlyName;
             this.scaleSelector.appendChild(option);
         }
-        // Set the dropdown to reflect the initial currentScale
-        this.scaleSelector.value = this.currentScale;
+        this.scaleSelector.value = this.currentScaleKey;
+        this.highlightScaleKeys(); // Initial highlight
     }
     
     bindEvents() {
@@ -219,64 +137,138 @@ class MidiKeyboardGame {
         this.pauseGameBtn.addEventListener('click', () => this.togglePause());
         this.resetGameBtn.addEventListener('click', () => this.resetGame());
         
-        // Volume control
         this.volumeSlider.addEventListener('input', (e) => this.updateVolume(e.target.value));
 
-        // Game mode buttons
         this.freePlayBtn.addEventListener('click', () => this.setMode('free'));
         this.gameModeBtn.addEventListener('click', () => this.setMode('game'));
 
-        // Scale selector
         if (this.scaleSelector) {
             this.scaleSelector.addEventListener('change', (event) => this.setScale(event.target.value));
         }
-
         document.addEventListener('keydown', (event) => this.handleComputerKeyPress(event));
+        // Handle keyup for computer keys if you want to stop sound on release
+        // document.addEventListener('keyup', (event) => this.handleComputerKeyRelease(event));
+    }
+
+    async initializeAudio() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.masterVolume = this.audioContext.createGain();
+            this.masterVolume.gain.value = parseFloat(this.volumeSlider.value) / 100;
+            this.masterVolume.connect(this.audioContext.destination);
+        } catch (error) {
+            console.error('Failed to initialize audio:', error);
+            this.statusElement.textContent = 'Audio system error. Sound may not work.';
+        }
+    }
+
+    midiToFrequency(midiNote) {
+        return 440 * Math.pow(2, (midiNote - 69) / 12);
+    }
+
+    playNote(midiNote, duration = 0.7) { // Slightly longer default duration
+        if (!this.audioContext) return;
+        if (this.audioContext.state === 'suspended') this.audioContext.resume();
+        
+        const frequency = this.midiToFrequency(midiNote);
+        const noteKey = midiNote.toString();
+        this.stopNote(midiNote); // Stop if already playing
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.type = 'triangle'; // Triangle wave is a bit softer than sine for simple synth
+        oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+        
+        const now = this.audioContext.currentTime;
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.6, now + 0.02); // Faster attack
+        gainNode.gain.exponentialRampToValueAtTime(0.2, now + 0.15); // Decay
+        gainNode.gain.setValueAtTime(0.2, now + duration - 0.1); // Sustain
+        gainNode.gain.linearRampToValueAtTime(0, now + duration); // Release
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.masterVolume);
+        
+        this.activeOscillators.set(noteKey, { oscillator, gainNode });
+        oscillator.start(now);
+        oscillator.stop(now + duration + 0.1); // Add a little tail for the ramp down
+        
+        oscillator.onended = () => {
+            gainNode.disconnect(); // Clean up connections
+            this.activeOscillators.delete(noteKey);
+        };
+    }
+    
+    stopNote(midiNote) {
+        const noteKey = midiNote.toString();
+        const activeNote = this.activeOscillators.get(noteKey);
+        if (activeNote) {
+            const now = this.audioContext.currentTime;
+            activeNote.gainNode.gain.cancelScheduledValues(now);
+            activeNote.gainNode.gain.setValueAtTime(activeNote.gainNode.gain.value, now); // Hold current value
+            activeNote.gainNode.gain.linearRampToValueAtTime(0.001, now + 0.05); // Quick fade out
+            
+            // Oscillator stop is already scheduled or will be handled by its onended
+            // We don't call activeNote.oscillator.stop() here again to avoid errors if already stopped.
+        }
     }
 
     setMode(mode) {
-        if (this.currentMode === mode) return; // Do nothing if already in this mode
-
+        if (this.currentMode === mode) return;
         this.currentMode = mode;
         this.resetGame(); // Reset game state when changing modes
-
-        if (mode === 'free') {
-            this.freePlayBtn.classList.add('active-mode');
-            this.gameModeBtn.classList.remove('active-mode');
-        } else { // game mode
-            this.gameModeBtn.classList.add('active-mode');
-            this.freePlayBtn.classList.remove('active-mode');
-        }
-        // applyModeSettings is called within resetGame
-    }
-
-    setScale(scaleName) {
-        if (this.availableScales.hasOwnProperty(scaleName)) {
-            this.currentScale = scaleName;
-            this.resetGame(); // Reset the game for the new scale to take effect
-            // Update dropdown UI if it's not already bound to this.currentScale
-            if (this.scaleSelector) { // Check if scaleSelector is initialized
-                this.scaleSelector.value = scaleName;
-            }
-        } else {
-            console.warn(`Scale "${scaleName}" not found.`);
-        }
+        this.applyModeSettings();
     }
 
     applyModeSettings() {
         if (this.currentMode === 'free') {
-            // Hide score, combo, lives sections
-            if (this.scoreSection) this.scoreSection.style.display = 'none';
-            if (this.livesSection) this.livesSection.style.display = 'none';
-            // Optionally, you might want to visually indicate free play mode in the status
-            this.statusElement.textContent = 'Free Play Mode. Practice freely!';
+            this.freePlayBtn.classList.add('active-mode');
+            this.gameModeBtn.classList.remove('active-mode');
+            if (this.scoreSection) this.scoreSection.style.visibility = 'hidden';
+            if (this.livesSection) this.livesSection.style.visibility = 'hidden';
+            if (this.levelDisplay) this.levelDisplay.style.visibility = 'hidden';
+            this.statusElement.textContent = 'Free Play Mode: Practice any scale!';
+            this.gameSpeed = 1; // Slower speed for free play
+            this.noteSpawnRate = 150; // Slower spawn for free play
         } else { // game mode
-            // Show score, combo, lives sections
-            if (this.scoreSection) this.scoreSection.style.display = ''; // Revert to default display
-            if (this.livesSection) this.livesSection.style.display = ''; // Revert to default display
+            this.gameModeBtn.classList.add('active-mode');
+            this.freePlayBtn.classList.remove('active-mode');
+            if (this.scoreSection) this.scoreSection.style.visibility = 'visible';
+            if (this.livesSection) this.livesSection.style.visibility = 'visible';
+            if (this.levelDisplay) this.levelDisplay.style.visibility = 'visible';
+            this.statusElement.textContent = this.midiInput ? `Level ${this.currentLevel}. Ready!` : 'Connect MIDI or use computer keys!';
+            this.applyLevelSettings();
+        }
+        this.updateUI(); // Update score/lives display based on visibility
+    }
+
+    setScale(scaleKey) {
+        if (this.availableScales.hasOwnProperty(scaleKey)) {
+            this.currentScaleKey = scaleKey;
+            if (this.scaleSelector) this.scaleSelector.value = scaleKey;
+            this.highlightScaleKeys();
+            // In game mode, changing scale might reset level or adapt current level
+            if (this.isGameRunning && this.currentMode === 'game') {
+                // Optionally restart level or warn user
+                console.log("Scale changed during game. Notes will now be from new scale.");
+            } else if (!this.isGameRunning) {
+                 this.resetGame(); // Or just update notes for next game
+            }
         }
     }
-    
+
+    highlightScaleKeys() {
+        document.querySelectorAll('.key.scale-active').forEach(k => k.classList.remove('scale-active'));
+        const notesInScale = this.availableScales[this.currentScaleKey];
+        if (notesInScale) {
+            notesInScale.forEach(noteName => {
+                const keyEl = document.querySelector(`.key[data-note="${noteName}"]`);
+                if (keyEl) keyEl.classList.add('scale-active');
+            });
+        }
+    }
+
     updateVolume(value) {
         if (this.masterVolume) {
             this.masterVolume.gain.value = value / 100;
@@ -285,208 +277,252 @@ class MidiKeyboardGame {
     }
     
     async connectMidi() {
+        // ... (MIDI connection logic largely unchanged, but update status and button states)
         try {
             this.statusElement.textContent = 'Requesting MIDI access...';
-            
-            if (!navigator.requestMIDIAccess) {
-                throw new Error('Web MIDI API not supported in this browser');
-            }
+            if (!navigator.requestMIDIAccess) throw new Error('Web MIDI API not supported');
             
             this.midiAccess = await navigator.requestMIDIAccess();
             this.statusElement.textContent = 'MIDI access granted. Looking for devices...';
             
-            // Look for MIDI input devices
             const inputs = this.midiAccess.inputs;
-            let deviceFound = false;
-            
-            for (let input of inputs.values()) {
-                console.log('Found MIDI device:', input.name);
-                this.midiInput = input;
-                this.midiInput.onmidimessage = (message) => this.handleMidiMessage(message);
-                deviceFound = true;
-                break; // Use the first available device
+            if (inputs.size === 0) {
+                this.statusElement.textContent = 'No MIDI input devices found. You can use computer keys.';
+                this.startGameBtn.disabled = false; // Allow starting with computer keys
+                return;
             }
-            
-            if (deviceFound) {
-                this.statusElement.textContent = `Connected to: ${this.midiInput.name}`;
-                this.connectMidiBtn.disabled = true;
-                this.startGameBtn.disabled = false;
-            } else {
-                this.statusElement.textContent = 'No MIDI devices found. Please connect your MiniLab 3 and try again.';
-                this.startGameBtn.disabled = true;
+
+            let deviceFound = false;
+            inputs.forEach(input => {
+                if (!deviceFound) { // Connect to the first one
+                    this.midiInput = input;
+                    this.midiInput.onmidimessage = (message) => this.handleMidiMessage(message);
+                    this.statusElement.textContent = `Connected to: ${this.midiInput.name}. Ready!`;
+                    this.connectMidiBtn.disabled = true;
+                    this.startGameBtn.disabled = false;
+                    deviceFound = true;
+                }
+            });
+            if (!deviceFound) { // Should not happen if inputs.size > 0, but as a fallback
+                 this.statusElement.textContent = 'Could not connect to a MIDI device. Try computer keys.';
+                 this.startGameBtn.disabled = false;
             }
             
         } catch (error) {
             console.error('MIDI connection failed:', error);
-            this.statusElement.textContent = `MIDI Error: ${error.message}. Please connect your MiniLab 3.`;
-            this.startGameBtn.disabled = true;
+            this.statusElement.textContent = `MIDI Error: ${error.message}. Using computer keys.`;
+            this.startGameBtn.disabled = false; // Allow starting with computer keys
         }
     }
     
     handleMidiMessage(message) {
         const [command, note, velocity] = message.data;
-        
-        // Note on message (144) with velocity > 0
-        if (command === 144 && velocity > 0) {
-            this.handleNotePress(note);
-        }
-        // Note off message (128) or note on with velocity 0
-        else if (command === 128 || (command === 144 && velocity === 0)) {
-            this.stopNote(note);
+        if (command === 144 && velocity > 0) { // Note on
+            this.handleNotePress(note, 'midi');
+        } else if (command === 128 || (command === 144 && velocity === 0)) { // Note off
+            this.handleNoteRelease(note, 'midi');
         }
     }
 
     handleComputerKeyPress(event) {
+        // Prevent game control via spacebar, enter etc. if desired
+        if (event.key === " " || event.key === "Enter") {
+            // event.preventDefault(); // If these keys have other functions
+        }
+        if (this.isPaused && event.key.toUpperCase() !== 'P') return; // Allow P to unpause
+
         const key = event.key.toUpperCase();
-        if (this.computerKeyToMidi.hasOwnProperty(key)) {
+        if (this.computerKeyToMidi.hasOwnProperty(key) && !event.repeat) {
             const midiNote = this.computerKeyToMidi[key];
-
-            // Prevent re-triggering if key is held down, if desired (optional for now)
-            // if (this.isGameRunning && !this.isPaused && !event.repeat) {
-            //     this.handleNotePress(midiNote);
-            // }
-
-            // For simplicity, always call handleNotePress on keydown for this game type
-            if (this.isGameRunning && !this.isPaused) {
-                this.handleNotePress(midiNote);
-            }
+            this.handleNotePress(midiNote, 'computer');
         }
     }
+    // Optional: handle computer key release for sound
+    // handleComputerKeyRelease(event) {
+    //     const key = event.key.toUpperCase();
+    //     if (this.computerKeyToMidi.hasOwnProperty(key)) {
+    //         const midiNote = this.computerKeyToMidi[key];
+    //         this.handleNoteRelease(midiNote, 'computer');
+    //     }
+    // }
     
-    handleNotePress(midiNote) {
-        // Find the corresponding note name
+    handleNotePress(midiNote, sourceType) {
         const noteName = Object.keys(this.noteToMidi).find(key => this.noteToMidi[key] === midiNote);
         if (!noteName) return;
         
-        // Play the audio for this note
-        this.playNote(midiNote, 0.8);
+        this.playNote(midiNote);
+        this.visualizeKeyPress(noteName, true);
         
-        // Visual feedback - highlight the pressed key
-        this.highlightKey(noteName);
-        
-        // Check if this note press hits any falling notes (only during game)
         if (this.isGameRunning && !this.isPaused) {
             this.checkNoteHit(noteName);
         }
     }
+
+    handleNoteRelease(midiNote, sourceType) {
+        this.stopNote(midiNote);
+        const noteName = Object.keys(this.noteToMidi).find(key => this.noteToMidi[key] === midiNote);
+        if (noteName) {
+            this.visualizeKeyPress(noteName, false);
+        }
+    }
     
-    highlightKey(noteName) {
-        const key = document.querySelector(`[data-note="${noteName}"]`);
-        if (key) {
-            key.classList.add('active');
-            setTimeout(() => key.classList.remove('active'), 150);
+    visualizeKeyPress(noteName, isActive) {
+        const keyElement = document.querySelector(`[data-note="${noteName}"]`);
+        if (keyElement) {
+            if (isActive) {
+                keyElement.classList.add('active');
+            } else {
+                keyElement.classList.remove('active');
+            }
         }
     }
     
     startGame() {
+        if (this.isGameRunning) return;
+
         this.isGameRunning = true;
         this.isPaused = false;
+        this.resetScoreAndLives(); // Reset score for a new game session
+        this.applyLevelSettings(); // Apply settings for current level
+
         this.startGameBtn.disabled = true;
         this.pauseGameBtn.disabled = false;
-        this.statusElement.textContent = 'Game started! Press the keys when notes reach the hit zone.';
+        this.freePlayBtn.disabled = true; // Disable mode switching during game
+        this.gameModeBtn.disabled = true;
+        this.scaleSelector.disabled = true;
+
+        this.statusElement.textContent = this.currentMode === 'game' ? `Level ${this.currentLevel} - Go!` : 'Free Play Started!';
         
-        this.gameLoop = setInterval(() => this.update(), 1000 / 60); // 60 FPS
+        this.lastFrameTime = performance.now();
+        if (this.gameLoopId) cancelAnimationFrame(this.gameLoopId); // Clear previous if any
+        this.gameLoopId = requestAnimationFrame(this.animationFrameLoop.bind(this));
     }
     
+    animationFrameLoop(currentTime) {
+        if (!this.isGameRunning) {
+            if (this.gameLoopId) cancelAnimationFrame(this.gameLoopId);
+            this.gameLoopId = null;
+            return;
+        }
+
+        const deltaTime = (currentTime - this.lastFrameTime); // Milliseconds since last frame
+        this.lastFrameTime = currentTime;
+
+        if (!this.isPaused) {
+            // Convert deltaTime to a factor based on 60 FPS (16.67ms per frame)
+            const deltaFactor = deltaTime / (1000 / 60);
+            this.gameUpdate(deltaFactor);
+        }
+        this.gameLoopId = requestAnimationFrame(this.animationFrameLoop.bind(this));
+    }
+
     togglePause() {
+        if (!this.isGameRunning) return;
         this.isPaused = !this.isPaused;
         this.pauseGameBtn.textContent = this.isPaused ? 'Resume' : 'Pause';
-        this.statusElement.textContent = this.isPaused ? 'Game paused' : 'Game resumed';
+        this.statusElement.textContent = this.isPaused ? 'Game Paused' : (this.currentMode === 'game' ? `Level ${this.currentLevel} - Resumed` : 'Free Play Resumed');
+        if (!this.isPaused) { // When resuming
+            this.lastFrameTime = performance.now(); // Reset lastFrameTime to avoid jump
+        }
     }
     
-    resetGame() {
+    resetGame() { // Full reset
         this.isGameRunning = false;
         this.isPaused = false;
-        this.score = 0;
-        this.combo = 1;
-        this.lives = 3;
-        this.fallingNotes = [];
-        this.framesSinceLastNote = 0;
-        
-        if (this.gameLoop) {
-            clearInterval(this.gameLoop);
-            this.gameLoop = null;
+        if (this.gameLoopId) {
+            cancelAnimationFrame(this.gameLoopId);
+            this.gameLoopId = null;
         }
         
-        // Stop all active notes
-        this.activeOscillators.forEach((noteData, noteKey) => {
-            this.stopNote(parseInt(noteKey));
-        });
+        this.resetScoreAndLives();
+        this.currentLevel = 1; // Reset to level 1
+        this.applyLevelSettings();
         
-        // Clear falling notes from DOM
-        this.fallingNotesContainer.innerHTML = '';
+        this.fallingNotes = [];
+        this.fallingNotesContainer.innerHTML = ''; // Clear visual notes
+        this.activeOscillators.forEach((_, noteKey) => this.stopNote(parseInt(noteKey)));
         
-        // Reset UI
-        this.updateUI(); // score/lives/combo to defaults
-        this.applyModeSettings(); // Apply mode-specific UI changes (show/hide elements)
+        this.updateUI();
+        this.updateLevelUI();
+        this.applyModeSettings(); // Re-apply mode specific UI visibility
 
-        this.startGameBtn.disabled = this.midiInput === null && !this.startGameBtn.disabled;
+        this.startGameBtn.disabled = false; // (this.midiInput === null); Handled by connectMidi or default for comp keys
         this.pauseGameBtn.disabled = true;
         this.pauseGameBtn.textContent = 'Pause';
-        // Status message will be set by applyModeSettings if in free play, otherwise default
-        if (this.currentMode === 'game') {
-            this.statusElement.textContent = this.midiInput ? 'Ready to play!' : 'Click "Connect MIDI" to begin';
-        }
+        this.freePlayBtn.disabled = false;
+        this.gameModeBtn.disabled = false;
+        this.scaleSelector.disabled = false;
+
+        this.statusElement.textContent = this.currentMode === 'free' ? 'Free Play Mode. Practice any scale!' : 'Ready to play!';
+        this.hideHitFeedback();
+        this.highlightScaleKeys(); // Re-apply scale highlighting
+    }
+
+    resetScoreAndLives() {
+        this.score = 0;
+        this.combo = 1;
+        this.maxCombo = 0;
+        this.lives = 3;
     }
     
-    update() {
+    gameUpdate(deltaFactor) { // deltaFactor is 1.0 at 60fps
         if (!this.isGameRunning || this.isPaused) return;
         
-        // In free play, notes might not spawn if lives/score logic is tied to spawning.
-        // For now, let's assume continuous note spawning regardless of mode,
-        // and score/lives are just not counted in 'free' mode.
-        // If specific free-play behavior for spawning is needed, it can be added here.
-
-        this.framesSinceLastNote++;
+        this.framesSinceLastNote += deltaFactor;
         
-        // Spawn new notes
-        if (this.framesSinceLastNote >= this.noteSpawnRate) {
+        const currentSpawnRate = this.currentMode === 'free' ? this.noteSpawnRate : this.levels[this.currentLevel].spawnRate;
+        if (this.framesSinceLastNote >= currentSpawnRate) {
             this.spawnNote();
             this.framesSinceLastNote = 0;
         }
         
-        // Update falling notes
-        this.updateFallingNotes();
-        
-        // Check for missed notes
-        this.checkMissedNotes();
-        
-        // Update UI
+        this.updateFallingNotes(deltaFactor);
+        if (this.currentMode === 'game') {
+            this.checkMissedNotes(); // Only check misses in game mode
+        }
         this.updateUI();
     }
     
     spawnNote() {
-        const currentScaleNotes = this.availableScales[this.currentScale];
-        if (!currentScaleNotes || currentScaleNotes.length === 0) {
-            console.warn(`Current scale "${this.currentScale}" has no notes or is invalid. Defaulting to all_notes.`);
-            // Default to all_notes if current scale is problematic
-            this.currentScale = 'all_notes';
-            const fallbackScaleNotes = this.availableScales[this.currentScale];
-            if (!fallbackScaleNotes || fallbackScaleNotes.length === 0) {
-                 // This should not happen if 'all_notes' is correctly defined with practiceNotes
-                console.error("Fallback scale 'all_notes' is also empty. Cannot spawn notes.");
-                return;
-            }
-             const randomNote = fallbackScaleNotes[Math.floor(Math.random() * fallbackScaleNotes.length)];
+        let notesPool;
+        if (this.currentMode === 'game') {
+            notesPool = this.levels[this.currentLevel].notes;
+        } else { // Free Play mode
+            notesPool = this.availableScales[this.currentScaleKey];
         }
 
-        const randomNote = currentScaleNotes[Math.floor(Math.random() * currentScaleNotes.length)];
-        const keyElement = document.querySelector(`[data-note="${randomNote}"]`);
+        if (!notesPool || notesPool.length === 0) {
+            console.warn(`No notes available for current level/scale. Defaulting to C4.`);
+            notesPool = ['C4']; // Fallback
+        }
+        
+        const randomNoteName = notesPool[Math.floor(Math.random() * notesPool.length)];
+        const keyElement = document.querySelector(`[data-note="${randomNoteName}"]`);
 
         if (!keyElement) {
-            console.warn(`Key element not found for note: ${randomNote} in scale ${this.currentScale}. Skipping spawn.`);
-            return; // Skip if the note's key element isn't on the virtual keyboard
+            console.warn(`Key element not found for note: ${randomNoteName}. Skipping spawn.`);
+            return;
         }
         
         const keyRect = keyElement.getBoundingClientRect();
-        const gameAreaRect = this.gameArea.getBoundingClientRect();
-        const noteX = keyRect.left - gameAreaRect.left + (keyRect.width / 2) - (this.barWidth / 2); // Center the bar
+        const gameAreaRect = this.gameArea.getBoundingClientRect(); // Re-fetch in case of resize
+        
+        // Ensure barWidth is dynamically calculated or use a fixed value
+        // For now, use this.barWidth, ensure it matches key visual if intended.
+        // Let's make barWidth responsive to the key's actual width for better alignment.
+        const currentBarWidth = keyElement.classList.contains('white-key') ? 
+                                parseFloat(getComputedStyle(keyElement).width) * 0.8 : // Slightly narrower than white key
+                                parseFloat(getComputedStyle(keyElement).width) * 0.9;  // Slightly narrower than black key
+        
+        const noteX = (keyRect.left - gameAreaRect.left) + (keyRect.width / 2) - (currentBarWidth / 2);
         
         const note = {
             id: Date.now() + Math.random(),
-            note: randomNote,
+            noteName: randomNoteName,
             x: noteX,
-            y: 0,
+            y: -this.barHeight, // Start off-screen from top
+            width: currentBarWidth,
+            element: null, // Will be assigned in createNoteElement
             hit: false,
             missed: false
         };
@@ -497,377 +533,248 @@ class MidiKeyboardGame {
     
     createNoteElement(note) {
         const noteElement = document.createElement('div');
-        noteElement.className = 'falling-bar'; // Changed class name
+        noteElement.className = 'falling-bar';
         noteElement.id = `note-${note.id}`;
-        noteElement.textContent = note.note; // Display note name
+        noteElement.textContent = note.noteName;
         noteElement.style.left = `${note.x}px`;
         noteElement.style.top = `${note.y}px`;
-        noteElement.style.width = `${this.barWidth}px`; // New: using this.barWidth
-        noteElement.style.height = `${this.barHeight}px`; // New: using this.barHeight
+        noteElement.style.width = `${note.width}px`;
+        noteElement.style.height = `${this.barHeight}px`;
         
+        // In free play, highlight the note as it approaches
+        if (this.currentMode === 'free') {
+            noteElement.style.backgroundColor = 'rgba(100, 200, 255, 0.7)'; // Light blue for free play
+        } else {
+            noteElement.style.backgroundColor = '#3498db'; // Default game mode color
+        }
+        
+        note.element = noteElement;
         this.fallingNotesContainer.appendChild(noteElement);
     }
     
-    updateFallingNotes() {
-        this.fallingNotes.forEach(note => {
+    updateFallingNotes(deltaFactor) {
+        const currentSpeed = (this.currentMode === 'free' ? this.gameSpeed : this.levels[this.currentLevel].speed) * deltaFactor;
+
+        for (let i = this.fallingNotes.length - 1; i >= 0; i--) {
+            const note = this.fallingNotes[i];
             if (!note.hit && !note.missed) {
-                note.y += this.gameSpeed;
-                const noteElement = document.getElementById(`note-${note.id}`);
-                if (noteElement) {
-                    noteElement.style.top = `${note.y}px`;
+                note.y += currentSpeed;
+                if (note.element) {
+                    note.element.style.top = `${note.y}px`;
+                }
+
+                // In free play, continuously highlight the key it's meant for
+                if (this.currentMode === 'free' && note.y > this.hitLineY - this.barHeight * 2 && note.y < this.hitLineY + this.barHeight) {
+                    // Could add a temporary highlight to the target virtual key here
                 }
             }
-        });
+        }
     }
     
-    checkNoteHit(pressedNote) {
-        // Find the corresponding key element simply for visual feedback on the keyboard
-        const keyElement = document.querySelector(`[data-note="${pressedNote}"]`);
+    checkNoteHit(pressedNoteName) {
+        let hitOccurred = false;
+        let bestHitQuality = null; // To handle one press hitting only the 'best' timed note
 
         for (let bar of this.fallingNotes) {
-            if (bar.hit || bar.missed) continue;
+            if (bar.hit || bar.missed || bar.noteName !== pressedNoteName) continue;
 
-            if (bar.note === pressedNote) {
-                // Hit condition: bottom of the bar is vertically aligned with this.hitLineY
-                if (Math.abs((bar.y + this.barHeight) - this.hitLineY) <= this.hitTolerance) {
-                    bar.hit = true;
-                    if (this.currentMode === 'game') {
-                        this.score += 100; // Basic score
-                        this.combo = Math.min(this.combo + 1, 10);
-                    }
+            const barBottomY = bar.y + this.barHeight;
+            const diff = Math.abs(barBottomY - this.hitLineY);
 
-                    const barElement = document.getElementById(`note-${bar.id}`);
-                    if (barElement) {
-                        barElement.classList.add('hit');
-                        barElement.classList.add('hit-flash'); // Add flash animation class
-                        // Position particles at the bottom-center of the bar where it hits the hit line
-                        this.createParticleEffect(bar.x + (this.barWidth / 2), this.hitLineY);
-                        setTimeout(() => this.removeNote(bar.id), 500);
-                    }
+            let quality = null;
+            if (diff <= this.hitTolerances.perfect) quality = 'perfect';
+            else if (diff <= this.hitTolerances.great) quality = 'great';
+            else if (diff <= this.hitTolerances.good) quality = 'good';
 
-                    if (keyElement) { // Visual feedback for physical/virtual key
-                        keyElement.classList.add('correct');
-                        setTimeout(() => keyElement.classList.remove('correct'), 500);
-                    }
-
-                    this.updateUI(); // Update score and combo display
-                    return; // One press hits one bar
+            if (quality) {
+                if (this.currentMode === 'game') {
+                    this.score += this.hitScores[quality] * this.combo;
+                    this.combo++;
+                    if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+                    this.showHitFeedback(quality);
+                } else { // Free Play - still show feedback
+                    this.showHitFeedback(quality, true); // isFreePlay = true
                 }
+
+                bar.hit = true;
+                hitOccurred = true;
+                bestHitQuality = quality; // Assuming first good hit is taken
+
+                if (bar.element) {
+                    bar.element.classList.add(quality); // e.g., 'perfect', 'great', 'good'
+                    bar.element.classList.add('hit-flash');
+                    this.createParticleEffect(bar.x + (bar.width / 2), this.hitLineY);
+                }
+                
+                // Schedule removal after animation
+                setTimeout(() => this.removeNote(bar.id), 400); 
+                break; // Process only one hit per key press
             }
         }
 
-        // If loop completes, no bar was hit for this key press at the right time
-        if (this.currentMode === 'game') {
-            this.combo = 1; // Reset combo if a key was pressed but no note was hit correctly
+        const keyElement = document.querySelector(`[data-note="${pressedNoteName}"]`);
+        if (keyElement) {
+            // Clear previous feedback classes before adding new one
+            keyElement.classList.remove('feedback-perfect', 'feedback-great', 'feedback-good', 'feedback-wrong', 'active');
+            keyElement.classList.add('active'); // Re-add active for current press
+
+            if (hitOccurred && bestHitQuality) {
+                keyElement.classList.add(`feedback-${bestHitQuality}`);
+            } else if (this.currentMode === 'game' && this.isGameRunning && !this.isPaused) {
+                // Pressed key but missed timing or wrong note for active bars
+                keyElement.classList.add('feedback-wrong');
+                this.combo = 1; // Reset combo on a mistimed press in game mode
+                this.showHitFeedback('miss');
+            }
+            setTimeout(() => {
+                keyElement.classList.remove('active', `feedback-${bestHitQuality}`, 'feedback-wrong');
+            }, 400);
         }
-        if (keyElement) { // Visual feedback for physical/virtual key
-            keyElement.classList.add('wrong');
-            setTimeout(() => keyElement.classList.remove('wrong'), 500);
+        
+        if (this.currentMode === 'game') this.updateUI();
+    }
+
+    showHitFeedback(quality, isFreePlay = false) {
+        if (!this.hitFeedbackElement) return;
+        
+        let text = '';
+        switch(quality) {
+            case 'perfect': text = 'Perfect!'; break;
+            case 'great': text = 'Great!'; break;
+            case 'good': text = 'Good!'; break;
+            case 'miss': text = isFreePlay ? '' : 'Miss!'; break; // Don't show "Miss!" text in free play for random presses
         }
-        this.updateUI(); // Update combo display
+        if (!text && !isFreePlay && quality !== 'miss') return; // Only show miss if relevant
+
+        this.hitFeedbackElement.textContent = text;
+        this.hitFeedbackElement.className = 'hit-feedback'; // Reset classes
+        this.hitFeedbackElement.classList.add(quality);
+        this.hitFeedbackElement.classList.add('show');
+
+        setTimeout(() => {
+            this.hideHitFeedback();
+        }, 800);
+    }
+    hideHitFeedback() {
+        if (this.hitFeedbackElement) this.hitFeedbackElement.classList.remove('show');
     }
     
     checkMissedNotes() {
-        this.fallingNotes.forEach(bar => {
-            if (bar.hit || bar.missed) return;
+        if (this.currentMode !== 'game') return;
 
-            // A bar is missed if its top (bar.y) has passed the this.hitLineY.
-            if (bar.y > this.hitLineY) {
+        for (let i = this.fallingNotes.length - 1; i >= 0; i--) {
+            const bar = this.fallingNotes[i];
+            if (bar.hit || bar.missed) continue;
+
+            // A bar is missed if its TOP (bar.y) has passed well below the hitLineY + tolerance
+            if (bar.y > this.hitLineY + this.hitTolerances.good) {
                 bar.missed = true;
-                if (this.currentMode === 'game') {
-                    this.lives--;
-                    this.combo = 1;
-                }
+                this.lives--;
+                this.combo = 1;
+                this.showHitFeedback('miss');
 
-                const barElement = document.getElementById(`note-${bar.id}`);
-                if (barElement) {
-                    barElement.classList.add('miss');
-                    setTimeout(() => {
-                        if (barElement.parentNode) {
-                            this.removeNote(bar.id);
-                        }
-                    }, 700);
+                if (bar.element) {
+                    bar.element.classList.add('miss');
+                    // Schedule removal after visual indication
+                    setTimeout(() => this.removeNote(bar.id), 700);
                 }
                 
                 this.updateUI();
-
-                if (this.currentMode === 'game' && this.lives <= 0) {
+                if (this.lives <= 0) {
                     this.gameOver();
+                    break; // Stop checking once game is over
                 }
             }
-        });
+        }
     }
     
     createParticleEffect(x, y) {
-        for (let i = 0; i < 4; i++) { // Reduced particle count
+        const particleCount = 5; // Fewer particles
+        for (let i = 0; i < particleCount; i++) {
             const particle = document.createElement('div');
             particle.className = 'particle';
+            // Ensure particles spawn relative to gameArea, not viewport
             particle.style.left = `${x}px`;
-            particle.style.top = `${y}px`;
-            particle.style.setProperty('--dx', `${(Math.random() - 0.5) * 100}px`);
-            particle.style.setProperty('--dy', `${(Math.random() - 0.5) * 100}px`);
+            particle.style.top = `${y - this.gameArea.getBoundingClientRect().top}px`; // Adjust for gameArea offset
+            particle.style.setProperty('--dx', `${(Math.random() - 0.5) * 80}px`); // Reduced spread
+            particle.style.setProperty('--dy', `${(Math.random() - 0.5) * 80 - 20}px`); // Bias upwards
             
             this.gameArea.appendChild(particle);
-            
-            setTimeout(() => {
-                if (particle.parentNode) {
-                    particle.parentNode.removeChild(particle);
-                }
-            }, 1000);
+            setTimeout(() => particle.remove(), 1000);
         }
     }
     
     removeNote(noteId) {
-        this.fallingNotes = this.fallingNotes.filter(note => note.id !== noteId);
-        const noteElement = document.getElementById(`note-${noteId}`);
-        if (noteElement && noteElement.parentNode) {
-            noteElement.parentNode.removeChild(noteElement);
+        const noteIndex = this.fallingNotes.findIndex(note => note.id === noteId);
+        if (noteIndex > -1) {
+            const noteElement = this.fallingNotes[noteIndex].element;
+            if (noteElement) noteElement.remove();
+            this.fallingNotes.splice(noteIndex, 1);
         }
     }
     
     updateUI() {
         this.scoreElement.textContent = this.score;
-        this.comboElement.textContent = this.combo;
-        this.livesElement.textContent = '♥'.repeat(this.lives) + '♡'.repeat(3 - this.lives);
+        this.comboElement.textContent = this.combo > 1 ? `x${this.combo}` : '';
+        if (this.currentMode === 'game') {
+             this.livesElement.textContent = '♥'.repeat(Math.max(0,this.lives)) + '♡'.repeat(Math.max(0, 3 - this.lives));
+        }
+    }
+
+    updateLevelUI() {
+        if (this.levelElement && this.currentMode === 'game') {
+            this.levelElement.textContent = this.currentLevel;
+        }
+    }
+
+    applyLevelSettings() {
+        if (this.currentMode !== 'game' || !this.levels[this.currentLevel]) return;
+        // const levelConf = this.levels[this.currentLevel];
+        // gameSpeed and noteSpawnRate are dynamically read in update/spawn methods
+        this.updateLevelUI();
+    }
+
+    advanceLevel() {
+        if (this.currentMode !== 'game') return;
+        // Condition for advancing level (e.g., certain score, number of perfects)
+        // For simplicity, let's say after X score or X notes hit
+        const scoreThresholdForNextLevel = this.currentLevel * 1000; // Example
+        if (this.score >= scoreThresholdForNextLevel && this.levels[this.currentLevel + 1]) {
+            this.currentLevel++;
+            this.applyLevelSettings();
+            this.statusElement.textContent = `Level Up! Now Level ${this.currentLevel}!`;
+            // Could add a small visual/audio cue for level up
+        }
     }
     
     gameOver() {
         this.isGameRunning = false;
-        clearInterval(this.gameLoop);
-        this.gameLoop = null;
+        if (this.gameLoopId) cancelAnimationFrame(this.gameLoopId);
+        this.gameLoopId = null;
         
-        // Stop all active notes
-        this.activeOscillators.forEach((noteData, noteKey) => {
-            this.stopNote(parseInt(noteKey));
-        });
+        this.activeOscillators.forEach((_, noteKey) => this.stopNote(parseInt(noteKey)));
         
-        this.statusElement.textContent = `Game Over! Final Score: ${this.score}`;
+        this.statusElement.textContent = `Game Over! Level: ${this.currentLevel}, Score: ${this.score}, Max Combo: x${this.maxCombo}`;
         this.startGameBtn.disabled = false;
         this.pauseGameBtn.disabled = true;
+        this.freePlayBtn.disabled = false;
+        this.gameModeBtn.disabled = false;
+        this.scaleSelector.disabled = false;
         
-        // Clear remaining notes
+        // Clear remaining notes with a delay for visual effect
         setTimeout(() => {
-            this.fallingNotesContainer.innerHTML = '';
-            this.fallingNotes = [];
-        }, 1000);
+            this.fallingNotes.forEach(note => note.element?.classList.add('miss'));
+            setTimeout(() => {
+                 this.fallingNotesContainer.innerHTML = '';
+                 this.fallingNotes = [];
+            }, 1000);
+        }, 500);
     }
 }
 
 // Initialize the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     const game = new MidiKeyboardGame();
-    
-    // Add some helpful instructions
-    console.log('MIDI Keyboard Practice Game Loaded!');
-    console.log('Controls:');
-    console.log('- Connect your MIDI keyboard and click "Connect MIDI"');
-    console.log('- Or use computer keyboard: A,S,D,F,G,H,J (white keys C4-B4) and W,E,T,Y,U (black keys C#4-A#4)');
-    console.log('- Press the correct key when notes reach the green hit zone');
-    console.log('- Get points based on timing accuracy');
-    console.log('- 3 mistakes and you\'re out!');
-
-    // Apply initial mode settings (ensure UI is correct for default 'game' mode)
-    game.applyModeSettings();
-    game.populateScaleSelector(); // Populate and set initial scale in dropdown
-
-    // Make game instance globally available for testing
-    window.game = game;
-    console.log("Game instance available as 'window.game'. Type 'game.runTests()' in console to run tests.");
+    window.midiGame = game; // Make it accessible for debugging
+    console.log("MIDI Keyboard Practice Game Initialized. Access with 'window.midiGame'.");
 });
-
-// Test functions will be added to MidiKeyboardGame class prototype or within the class itself.
-MidiKeyboardGame.prototype.runTests = function() {
-    console.log("===== Starting Tests =====");
-    this.testGameModes();
-    this.testScaleSelection();
-    console.log("===== Tests Finished =====");
-};
-
-MidiKeyboardGame.prototype.testGameModes = function() {
-    console.log("--- Running Game Mode Tests ---");
-    let passCount = 0;
-    let failCount = 0;
-    const originalScore = this.score;
-    const originalLives = this.lives;
-    const originalCombo = this.combo;
-
-    const assert = (condition, message) => {
-        if (condition) {
-            console.log(`[PASS] ${message}`);
-            passCount++;
-        } else {
-            console.error(`[FAIL] ${message}`);
-            failCount++;
-        }
-    };
-
-    // Test 1: Switch to Free Play
-    console.log("Testing Free Play Mode...");
-    this.setMode('free');
-    assert(this.currentMode === 'free', "Mode set to 'free'");
-    assert(this.scoreSection.style.display === 'none', "Score section hidden in free play");
-    assert(this.livesSection.style.display === 'none', "Lives section hidden in free play");
-
-    // Simulate note hit in Free Play
-    const initialScoreFree = this.score;
-    this.checkNoteHit('C4'); // Assuming C4 is a valid note for this check
-    assert(this.score === initialScoreFree, "Score does not change on hit in free play");
-    assert(this.combo === 1, "Combo remains 1 on hit in free play (or its initial free play state)");
-
-    // Simulate note miss in Free Play
-    const initialLivesFree = this.lives; // Should be 3 after resetGame in setMode
-    // Mock a missed note
-    const mockMissedNoteFree = {
-        id: 'test-miss-free',
-        note: 'C4', // Any valid note
-        x: 50,
-        y: this.gameArea.getBoundingClientRect().height + 100, // Ensure it's way past the hit zone
-        hit: false,
-        missed: false // checkMissedNotes will set this
-    };
-    this.fallingNotes.push(mockMissedNoteFree);
-    this.checkMissedNotes();
-    assert(this.lives === initialLivesFree, "Lives do not change on miss in free play");
-    this.fallingNotes = this.fallingNotes.filter(n => n.id !== 'test-miss-free'); // Clean up
-
-    // Test 2: Switch back to Game Mode
-    console.log("Testing Game Mode...");
-    this.setMode('game');
-    assert(this.currentMode === 'game', "Mode set to 'game'");
-    assert(this.scoreSection.style.display !== 'none', "Score section visible in game mode");
-    assert(this.livesSection.style.display !== 'none', "Lives section visible in game mode");
-
-    // Reset score/lives for clearer testing of game mode effects
-    this.score = 0;
-    this.lives = 3;
-    this.combo = 1;
-    this.updateUI();
-
-
-    // Simulate note hit in Game Mode
-    this.checkNoteHit('D4'); // Use a different note to avoid potential interference
-    assert(this.score > 0, "Score increases on hit in game mode");
-    // Combo assertion depends on hitting a valid falling note, which is hard to guarantee here.
-    // We're mainly testing that score logic runs.
-
-    // Simulate note miss in Game Mode
-    const initialLivesGame = this.lives;
-    const mockMissedNoteGame = {
-        id: 'test-miss-game',
-        note: 'D4',
-        x: 50,
-        y: this.gameArea.getBoundingClientRect().height + 100,
-        hit: false,
-        missed: false
-    };
-    this.fallingNotes.push(mockMissedNoteGame);
-    this.checkMissedNotes();
-    assert(this.lives < initialLivesGame, "Lives decrease on miss in game mode");
-    this.fallingNotes = this.fallingNotes.filter(n => n.id !== 'test-miss-game'); // Clean up
-
-    // Restore original game state before tests
-    this.score = originalScore;
-    this.lives = originalLives;
-    this.combo = originalCombo;
-    this.setMode('game'); // Default back to game mode
-    this.updateUI();
-    console.log(`Game Mode Test Summary: ${passCount} PASS, ${failCount} FAIL`);
-};
-
-MidiKeyboardGame.prototype.testScaleSelection = function() {
-    console.log("--- Running Scale Selection Tests ---");
-    let passCount = 0;
-    let failCount = 0;
-    const originalScale = this.currentScale;
-    // It's tricky to test spawn rate without async/await, so we'll focus on the note pool.
-
-    const assert = (condition, message) => {
-        if (condition) {
-            console.log(`[PASS] ${message}`);
-            passCount++;
-        } else {
-            console.error(`[FAIL] ${message}`);
-            failCount++;
-        }
-    };
-
-    // Test 1: C Major Pentascale
-    console.log("Testing C Major Pentascale...");
-    this.setScale('c_major_pentascale');
-    assert(this.currentScale === 'c_major_pentascale', "Scale set to 'c_major_pentascale'");
-    const cMajorPentaNotes = this.availableScales['c_major_pentascale'];
-    assert(JSON.stringify(this.availableScales[this.currentScale]) === JSON.stringify(cMajorPentaNotes), "Correct notes for C Major Pentascale");
-
-    let spawnedNotesCMajor = [];
-    for (let i = 0; i < 20; i++) { // Spawn 20 notes
-        // Temporarily clear fallingNotes to isolate spawned notes for this test run
-        const originalFallingNotes = [...this.fallingNotes];
-        this.fallingNotes = [];
-        this.spawnNote();
-        if (this.fallingNotes.length > 0) {
-            spawnedNotesCMajor.push(this.fallingNotes[0].note);
-        }
-        this.fallingNotes = originalFallingNotes; // Restore
-    }
-    let allInCMajorPenta = true;
-    for (const note of spawnedNotesCMajor) {
-        if (!cMajorPentaNotes.includes(note)) {
-            allInCMajorPenta = false;
-            break;
-        }
-    }
-    assert(allInCMajorPenta && spawnedNotesCMajor.length > 0, "All spawned notes are in C Major Pentascale");
-    if (!allInCMajorPenta) console.log("Spawned notes (C Major Pentascale):", spawnedNotesCMajor);
-
-
-    // Test 2: G Major Pentascale
-    console.log("Testing G Major Pentascale...");
-    this.setScale('g_major_pentascale');
-    assert(this.currentScale === 'g_major_pentascale', "Scale set to 'g_major_pentascale'");
-    const gMajorPentaNotes = this.availableScales['g_major_pentascale'];
-    assert(JSON.stringify(this.availableScales[this.currentScale]) === JSON.stringify(gMajorPentaNotes), "Correct notes for G Major Pentascale");
-
-    let spawnedNotesGMajor = [];
-    for (let i = 0; i < 20; i++) {
-        const originalFallingNotes = [...this.fallingNotes];
-        this.fallingNotes = [];
-        this.spawnNote();
-        if (this.fallingNotes.length > 0) {
-            spawnedNotesGMajor.push(this.fallingNotes[0].note);
-        }
-        this.fallingNotes = originalFallingNotes;
-    }
-    let allInGMajorPenta = true;
-    for (const note of spawnedNotesGMajor) {
-        if (!gMajorPentaNotes.includes(note)) {
-            allInGMajorPenta = false;
-            break;
-        }
-    }
-    assert(allInGMajorPenta && spawnedNotesGMajor.length > 0, "All spawned notes are in G Major Pentascale");
-    if (!allInGMajorPenta) console.log("Spawned notes (G Major Pentascale):", spawnedNotesGMajor);
-
-    // Test 3: All Notes (fallback/default)
-    console.log("Testing All Notes (Chromatic)...");
-    this.setScale('all_notes');
-    assert(this.currentScale === 'all_notes', "Scale set to 'all_notes'");
-    // Check if it's using a wider variety (not strictly all practiceNotes, but more than pentascale)
-    let spawnedNotesAll = [];
-     for (let i = 0; i < 30; i++) { // Spawn more notes to check variety
-        const originalFallingNotes = [...this.fallingNotes];
-        this.fallingNotes = [];
-        this.spawnNote();
-        if (this.fallingNotes.length > 0) {
-            spawnedNotesAll.push(this.fallingNotes[0].note);
-        }
-        this.fallingNotes = originalFallingNotes;
-    }
-    const uniqueNotesAll = new Set(spawnedNotesAll);
-    assert(uniqueNotesAll.size > 5, "Spawned notes for 'all_notes' show variety (more than 5 unique notes)");
-    if (uniqueNotesAll.size <= 5) console.log("Spawned unique notes (All Notes):", uniqueNotesAll);
-
-
-    // Restore original scale
-    this.setScale(originalScale);
-    console.log(`Scale Selection Test Summary: ${passCount} PASS, ${failCount} FAIL`);
-};
