@@ -222,6 +222,7 @@ body::before {
     box-sizing: border-box; /* Include border in width/height */
     display: flex; /* For centering text content */
     align-items: center; /* For centering text content */
+    z-index: 0; /* Ensure notes are below the hit line */
     justify-content: center; /* For centering text content */
     font-size: 16px; /* Adjusted for note names */
     /* font-weight: bold; Removed for clearer note names */
@@ -244,6 +245,43 @@ body::before {
     /* Add any transition or subtle animation if desired */
     transition: background-color 0.1s ease, opacity 0.3s ease, border 0.1s ease;
 }
+
+.hit-line {
+    position: absolute;
+    bottom: 50px; /* Position from the bottom of game-area */
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: #00BCD4; /* Bright Cyan */
+    box-shadow: 0 0 8px #00BCD4, 0 0 12px #00BCD4; /* Glow effect */
+    z-index: 1; /* Above falling notes */
+}
+
+@keyframes hit-flash-animation {
+    0% {
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.7), 0 0 10px rgba(255, 255, 255, 0.5), inset 0 0 3px rgba(255, 255, 200, 0.5);
+        transform: scale(1.05);
+        opacity: 1;
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(255, 255, 255, 1), 0 0 25px rgba(255, 255, 100, 0.8), inset 0 0 5px rgba(255, 255, 200, 0.7); /* Brighter, wider glow */
+        transform: scale(1.1);
+        opacity: 0.9;
+    }
+    100% {
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.7), 0 0 10px rgba(255, 255, 255, 0.5), inset 0 0 3px rgba(255, 255, 200, 0.5);
+        transform: scale(1.05);
+        opacity: 1;
+    }
+}
+
+.falling-bar.hit-flash {
+    animation-name: hit-flash-animation;
+    animation-duration: 0.3s;
+    animation-timing-function: ease-out;
+    /* animation-fill-mode: forwards; /* Not strictly needed as element is removed */
+}
+
 
 /* Keyboard styles */
 .keyboard-container {

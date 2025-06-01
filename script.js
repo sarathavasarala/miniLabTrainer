@@ -15,7 +15,7 @@ class MidiKeyboardGame {
         this.hitTolerance = 5; // Pixels for hit accuracy
         this.barWidth = 50; // Width of the falling bars
         this.gameLoop = null;
-        this.currentMode = 'game'; // 'game' or 'free'
+        this.currentMode = 'free'; // Default to Free Play mode
 
         this.availableScales = {
             'all_notes': this.practiceNotes, // Existing full range
@@ -158,6 +158,19 @@ class MidiKeyboardGame {
         this.gameArea = document.getElementById('gameArea');
         this.fallingNotesContainer = document.getElementById('fallingNotes');
         this.keyboard = document.getElementById('keyboard');
+
+        // Calculate hitLineY based on gameArea's actual height at init
+        // Ensure gameArea has its dimensions set by CSS before this runs.
+        if (this.gameArea) { // gameArea might not be available in tests if not fully initialized
+            this.gameAreaRect = this.gameArea.getBoundingClientRect();
+            this.hitLineY = this.gameAreaRect.height - 50; // 50px from the bottom
+        } else {
+            // Fallback for environments where gameArea might not be fully initialized (e.g. some test scenarios)
+            // This assumes the CSS height of gameArea is 420px.
+            this.hitLineY = 420 - 50;
+            console.warn("gameArea not fully initialized during hitLineY calculation, using default height.");
+        }
+
 
         // Score/Lives sections for show/hide
         this.scoreSection = document.querySelector('.score-section');
@@ -508,25 +521,15 @@ class MidiKeyboardGame {
     }
     
     checkNoteHit(pressedNote) {
+        // Find the corresponding key element simply for visual feedback on the keyboard
         const keyElement = document.querySelector(`[data-note="${pressedNote}"]`);
-        if (!keyElement) return;
-
-        const gameAreaRect = this.gameArea.getBoundingClientRect();
-        const keyRect = keyElement.getBoundingClientRect();
-        // Calculate keyTopY relative to the fallingNotesContainer's coordinate system
-        // Assuming fallingNotesContainer is the direct offsetParent for positioning calculations,
-        // or that its top aligns with gameArea.top for this calculation to be simple.
-        // If fallingNotesContainer has its own offset, this might need adjustment.
-        // For now, assume keyTopY relative to gameArea is sufficient if bars are positioned relative to gameArea.
-        const keyTopY = keyRect.top - gameAreaRect.top;
 
         for (let bar of this.fallingNotes) {
             if (bar.hit || bar.missed) continue;
 
             if (bar.note === pressedNote) {
-                const barBottomY = bar.y + this.barHeight;
-
-                if (Math.abs(barBottomY - keyTopY) <= this.hitTolerance) {
+                // Hit condition: bottom of the bar is vertically aligned with this.hitLineY
+                if (Math.abs((bar.y + this.barHeight) - this.hitLineY) <= this.hitTolerance) {
                     bar.hit = true;
                     if (this.currentMode === 'game') {
                         this.score += 100; // Basic score
@@ -536,14 +539,16 @@ class MidiKeyboardGame {
                     const barElement = document.getElementById(`note-${bar.id}`);
                     if (barElement) {
                         barElement.classList.add('hit');
-                        // barElement.textContent = '✓'; // Note name persists, hit indicated by style
-                        // Position particles at the bottom-center of the bar where it hits the key line
-                        this.createParticleEffect(bar.x + (this.barWidth / 2), barBottomY);
-                        setTimeout(() => this.removeNote(bar.id), 300);
+                        barElement.classList.add('hit-flash'); // Add flash animation class
+                        // Position particles at the bottom-center of the bar where it hits the hit line
+                        this.createParticleEffect(bar.x + (this.barWidth / 2), this.hitLineY);
+                        setTimeout(() => this.removeNote(bar.id), 500);
                     }
 
-                    keyElement.classList.add('correct');
-                    setTimeout(() => keyElement.classList.remove('correct'), 500);
+                    if (keyElement) { // Visual feedback for physical/virtual key
+                        keyElement.classList.add('correct');
+                        setTimeout(() => keyElement.classList.remove('correct'), 500);
+                    }
 
                     this.updateUI(); // Update score and combo display
                     return; // One press hits one bar
@@ -553,32 +558,21 @@ class MidiKeyboardGame {
 
         // If loop completes, no bar was hit for this key press at the right time
         if (this.currentMode === 'game') {
-            this.combo = 1;
+            this.combo = 1; // Reset combo if a key was pressed but no note was hit correctly
         }
-        keyElement.classList.add('wrong');
-        setTimeout(() => keyElement.classList.remove('wrong'), 500);
+        if (keyElement) { // Visual feedback for physical/virtual key
+            keyElement.classList.add('wrong');
+            setTimeout(() => keyElement.classList.remove('wrong'), 500);
+        }
         this.updateUI(); // Update combo display
     }
     
     checkMissedNotes() {
-        const gameAreaRect = this.gameArea.getBoundingClientRect();
-
         this.fallingNotes.forEach(bar => {
-            if (bar.hit || bar.missed) return; // Use 'return' to skip to next iteration in forEach
+            if (bar.hit || bar.missed) return;
 
-            const keyElement = document.querySelector(`[data-note="${bar.note}"]`);
-            if (!keyElement) {
-                console.warn(`Missed check: No key element found for note ${bar.note}`);
-                return;
-            }
-
-            const keyRect = keyElement.getBoundingClientRect();
-            const keyTopY = keyRect.top - gameAreaRect.top;
-
-            // A bar is missed if its top (bar.y) has passed the key's top alignment point (keyTopY)
-            // by more than the hitTolerance. This means the opportunity to align
-            // bar.y + this.barHeight with keyTopY is gone.
-            if (bar.y > keyTopY + this.hitTolerance) {
+            // A bar is missed if its top (bar.y) has passed the this.hitLineY.
+            if (bar.y > this.hitLineY) {
                 bar.missed = true;
                 if (this.currentMode === 'game') {
                     this.lives--;
@@ -588,15 +582,11 @@ class MidiKeyboardGame {
                 const barElement = document.getElementById(`note-${bar.id}`);
                 if (barElement) {
                     barElement.classList.add('miss');
-                    // barElement.textContent = '✗'; // Note name persists, miss indicated by style
-                    // Add a small visual effect like a shake or fade out for missed notes
                     setTimeout(() => {
-                        if (barElement.parentNode) { // Check if still in DOM
-                            // Optional: Add a more distinct miss animation if desired
-                            // For now, just remove it
+                        if (barElement.parentNode) {
                             this.removeNote(bar.id);
                         }
-                    }, 500);
+                    }, 700);
                 }
                 
                 this.updateUI();
@@ -609,7 +599,7 @@ class MidiKeyboardGame {
     }
     
     createParticleEffect(x, y) {
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 4; i++) { // Reduced particle count
             const particle = document.createElement('div');
             particle.className = 'particle';
             particle.style.left = `${x}px`;
