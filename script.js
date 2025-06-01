@@ -8,7 +8,7 @@ class MidiKeyboardGame {
         this.midiAccess = null;
         this.midiInput = null;
         this.fallingNotes = [];
-        this.gameSpeed = 2; // pixels per frame
+        this.gameSpeed = 1.5; // pixels per frame
         this.noteSpawnRate = 120; // frames between notes (2 seconds at 60fps)
         this.framesSinceLastNote = 0;
         this.gameLoop = null;
@@ -30,6 +30,21 @@ class MidiKeyboardGame {
             'C4': 60, 'C#4': 61, 'D4': 62, 'D#4': 63, 'E4': 64, 'F4': 65, 'F#4': 66,
             'G4': 67, 'G#4': 68, 'A4': 69, 'A#4': 70, 'B4': 71,
             'C5': 72
+        };
+
+        this.computerKeyToMidi = {
+            'A': 60, // C4
+            'W': 61, // C#4
+            'S': 62, // D4
+            'E': 63, // D#4
+            'D': 64, // E4
+            'F': 65, // F4
+            'T': 66, // F#4
+            'G': 67, // G4
+            'Y': 68, // G#4
+            'H': 69, // A4
+            'U': 70, // A#4
+            'J': 71  // B4
         };
         
         this.initializeElements();
@@ -151,6 +166,8 @@ class MidiKeyboardGame {
         
         // Volume control
         this.volumeSlider.addEventListener('input', (e) => this.updateVolume(e.target.value));
+
+        document.addEventListener('keydown', (event) => this.handleComputerKeyPress(event));
     }
     
     updateVolume(value) {
@@ -209,6 +226,23 @@ class MidiKeyboardGame {
         // Note off message (128) or note on with velocity 0
         else if (command === 128 || (command === 144 && velocity === 0)) {
             this.stopNote(note);
+        }
+    }
+
+    handleComputerKeyPress(event) {
+        const key = event.key.toUpperCase();
+        if (this.computerKeyToMidi.hasOwnProperty(key)) {
+            const midiNote = this.computerKeyToMidi[key];
+
+            // Prevent re-triggering if key is held down, if desired (optional for now)
+            // if (this.isGameRunning && !this.isPaused && !event.repeat) {
+            //     this.handleNotePress(midiNote);
+            // }
+
+            // For simplicity, always call handleNotePress on keydown for this game type
+            if (this.isGameRunning && !this.isPaused) {
+                this.handleNotePress(midiNote);
+            }
         }
     }
     
@@ -350,8 +384,13 @@ class MidiKeyboardGame {
     }
     
     checkNoteHit(pressedNote) {
-        const hitZoneTop = this.gameArea.offsetHeight - 130; // Hit zone position
-        const hitZoneBottom = this.gameArea.offsetHeight - 50;
+        const hitZoneElement = this.gameArea.querySelector('.hit-zone');
+        if (!hitZoneElement) {
+            console.error("Hit zone element not found!");
+            return; // Or handle error appropriately
+        }
+        const hitZoneTop = hitZoneElement.offsetTop;
+        const hitZoneBottom = hitZoneElement.offsetTop + hitZoneElement.offsetHeight;
         
         for (let note of this.fallingNotes) {
             if (note.hit || note.missed) continue;
@@ -490,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('MIDI Keyboard Practice Game Loaded!');
     console.log('Controls:');
     console.log('- Connect your MIDI keyboard and click "Connect MIDI"');
-    console.log('- Or use computer keyboard: C, D, E, F, G, A, B keys');
+    console.log('- Or use computer keyboard: A,S,D,F,G,H,J (white keys C4-B4) and W,E,T,Y,U (black keys C#4-A#4)');
     console.log('- Press the correct key when notes reach the green hit zone');
     console.log('- Get points based on timing accuracy');
     console.log('- 3 mistakes and you\'re out!');
